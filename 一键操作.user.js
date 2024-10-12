@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         一键确认&新建组&批量删除
+// @name         一键操作
 // @namespace    http://tampermonkey.net/
 // @version      2024-08-17
 // @description  必须在document加载完成后执行,依赖main.js
@@ -7,6 +7,7 @@
 // @match        http://10.10.15.32/Home/MainView
 // @match        https://10.10.54.18/iportal/config
 // @match        https://10.10.54.18/portal/config
+// @match        https://10.10.54.18/acs/app/events/inAndOutHistory
 // @match        http://10.10.10.20/*
 // @match        https://www.baomi.org.cn/*
 // @match        http://10.10.10.10/appsystem/classify/*
@@ -32,65 +33,174 @@ function 公共引入(){
 }
 公共引入()
 
-/* 综合管理平台中筛选制度用 */
-function 筛选制度() {
-    let style = document.createElement('style')
-    style.innerText = `
-    #btn1:hover {
-        right: 0px;
+/*
+*把一个整数t随机分成n份,每份相加之和等于t
+*/
+function splitIntegerRandomly(t, n) {
+    if (n > t || n < 1) {
+        throw new Error('Invalid n: n must be between 1 and t');
     }
 
-    #btn1 {
-        color: white;
-        cursor: pointer;
-        background: rgb(0, 97, 88);
-        border-radius: 3px;
-        width: 76px;
-        height: 34px;
-        right: -66px;
-        bottom: 30px;
-        position: absolute;
-        z-index: 99999;
-        border: 1px solid rgb(206, 207, 207);
-        transition: right 0.2s cubic-bezier(0.55, 0.06, 0.68, 0.19)
-    }`
+    // 初始化结果数组，先预分配最小份1
+    let result = new Array(n).fill(1);
+    let remaining = t - n; // 剩余需要分配的数
 
-    let btn = document.createElement('button')
-    btn.id = 'btn1'
+    // 如果剩余为0，则无需进一步分配
+    if (remaining === 0) {
+        return result;
+    }
 
-    document.body.appendChild(btn)
-    document.head.appendChild(style)
+    // 随机选择n-1个分割点
+    for (let i = 0; i < n - 1 && remaining > 0; i++) {
+        // 随机选择一个介于1和remaining之间的整数（包含1，不包含remaining+1）
+        // 加上1保证至少分配1给当前份
+        let add = Math.floor(Math.random() * remaining) + 1;
+        result[i] += add; // 增加当前份
+        remaining -= add; // 更新剩余量
+    }
 
-    btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 30px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
-    btn.innerText = '一键确认'
-    btn.addEventListener('click',async function(){
-        let t = localStorage.getItem('search')
-        const { value: text } = await Swal.fire({
-            input: 'textarea',
-            // text: '默认值:' + (t==null?'':t),
-            inputLabel: '粘贴',
-            inputPlaceholder: '粘贴到这里...',
-            inputAttributes: {
-                'aria-label': 'Type your message here'
-            },
-            showCancelButton: true
-        })
+    // 如果还有剩余（理论上不应该有，除非n=1且t>1，但这种情况在开始时已排除），全部加到最后一份
+    if (remaining > 0) {
+        result[n - 1] += remaining;
+    }
 
-        if(text==undefined)return;
+    return result;
+}
+/*
+*js把一个整数t随机分成n份,使每一份相加之和等于t,每一份是等概率的,每一份都不大于50
+*/
+function splitIntegerRandomlyWithinLimit(t, n, maxPerPart = 50) {
+    if (n > t || n < 1) {
+        throw new Error('Invalid n: n must be between 1 and t');
+    }
+    if (t / n > maxPerPart) {
+        throw new Error('Cannot distribute t evenly without exceeding maxPerPart');
+    }
 
-        if(text.trim()==''){
-            alert('不能为空')
-            return
+    // 计算每份的基本数量（向下取整）
+    let base = Math.floor(t / n);
+    let remainder = t % n; // 计算分配后剩余的数
+
+    // 初始化结果数组
+    let result = new Array(n).fill(base);
+
+    // 随机选择remainder个位置来增加1（以保持等概率）
+    let indices = Array.from({ length: n }, (_, i) => i);
+    for (let i = 0; i < remainder; i++) {
+        // 随机选择一个索引（Fisher-Yates shuffle的一个简单版本）
+        let j = Math.floor(Math.random() * (indices.length - i));
+        let index = indices[j];
+        indices.splice(j, 1); // 从索引数组中移除已选索引
+
+        // 检查增加后是否超过maxPerPart
+        if (result[index] + 1 <= maxPerPart) {
+            result[index]++;
+        } else {
+            // 如果超过maxPerPart，则重新选择（这可能会稍微破坏等概率，但很少见）
+            i--; // 重试当前循环
         }
-        localStorage.setItem('search', text)
+    }
 
-        let tds = $$('table.table-list > tbody > tr > td:nth-child(1)')
-        tds.each((id,item)=>{
-            if(!(new RegExp(text,'g').test(item.innerText))){
-                $$(item.parentElement).toggle()
-            }
-        })
-    })
+    return result;
+}
+
+/**
+ * 生成随机日期
+ * 不传递任何参数则返回当前月的随机日期
+ * 传递year,month参数,则返回指定年月中的随机日期
+ */
+function getRandomDate(year, month, day = 6) {
+
+	let today = new Date()
+
+	if(year == undefined){
+	  month = today.getMonth()
+	  year = today.getFullYear()
+	}else{
+	  month -= 1
+	}
+
+	// 创建一个表示月份第一天的Date对象
+	let date = new Date(year, month, 1);
+
+	// 获取该月份的天数
+	// 注意getMonth()返回的是0-11的月份
+	let daysInMonth = new Date(year, month + 1, 0).getDate();
+
+	//计算生成去掉day天的当月天数
+	daysInMonth -= daysInMonth>day?day:0
+
+	// 1至daysInMonth范围内生成一个随机天数
+	let randomDay = Math.floor(Math.random() * daysInMonth) + 1;
+
+	// 设置date对象为月份内的随机一天
+	date.setDate(randomDay);
+
+	// 格式化日期为YYYY-MM-DD
+	// let formattedDate = date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2);
+	let formattedDate = (date.getMonth() + 1) + '月' + ('0' + date.getDate()).slice(-2) + '日';
+	return formattedDate;
+}
+
+/* 综合管理平台中筛选制度用 */
+function 筛选制度() {
+	let style = document.createElement('style')
+	style.innerText = `
+	#btn1:hover {
+		right: 0px;
+	}
+
+	#btn1 {
+		color: white;
+		cursor: pointer;
+		background: rgb(0, 97, 88);
+		border-radius: 3px;
+		width: 76px;
+		height: 34px;
+		right: -66px;
+		bottom: 30px;
+		position: absolute;
+		z-index: 99999;
+		border: 1px solid rgb(206, 207, 207);
+		transition: right 0.2s cubic-bezier(0.55, 0.06, 0.68, 0.19)
+	}`
+
+	let btn = document.createElement('button')
+	btn.id = 'btn1'
+
+	document.body.appendChild(btn)
+	document.head.appendChild(style)
+
+	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 30px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
+	btn.innerText = '一键确认'
+	btn.addEventListener('click',async function(){
+		let t = localStorage.getItem('search')
+		const { value: text } = await Swal.fire({
+			input: 'textarea',
+			// text: '默认值:' + (t==null?'':t),
+			inputLabel: '粘贴',
+			inputPlaceholder: '粘贴到这里...',
+			inputAttributes: {
+				'aria-label': 'Type your message here'
+			},
+			showCancelButton: true
+		})
+
+		if(text==undefined)return;
+
+		if(text.trim()==''){
+			alert('不能为空')
+			return
+		}
+		localStorage.setItem('search', text)
+
+		let tds = $$('table.table-list > tbody > tr > td:nth-child(1)')
+		tds.each((id,item)=>{
+			if(!(new RegExp(text,'g').test(item.innerText))){
+				$$(item.parentElement).toggle()
+			}
+		})
+	})
 }
 
 
@@ -195,50 +305,106 @@ function generateRandom5DigitNumber() {
   return num.toString().padStart(5, '0'); // 使用padStart确保总是5位数
 }
 
-async function change_password_by_admin(login_name, newpassword = "Aa@123456", admin_user, admin_password) {
-	let data = await findByLoginName(login_name)
-	debugger
-	if (data.length==0) return {code: 1, msg: `${login_name}查无此人`}
-	let dict_obj = {"added": {"passwordhide": "","extRoleIds": "","extWorkScopeValue": "","isChangePWD": "true","isLoginNameModifyed": "true","isNewLdap": "false","isNewMember": "false","checkOnlyLoginName": "false","i18nEnable": "false","ldapSetType": null,"ldapUserCodes": "","selectOU": "","extRoles": "","description": "","province": null,"city": null,"district": null,"workLocalCode": "","workLocalName": "","search_province": null,"search_city": null,"search_district": null,"search_workLocalCode": "","search_workLocalName": "","extAccountName": "","sortIdtype1": "0","sortIdtype2": null,"extprimaryPost": "","extlevelName": "","extWorkScope": "","workspace": "","workLocal": "","extgender": "-1","extbirthday": "","extdescription": ""},"deleted": {"v3xOrgPrincipal": "com.seeyon.ctp.organization.bo.V3xOrgPrincipal@69d3bbfc","realSortId": "12017","blog": "","reporterDeptTitle": "安全环保处","customerAddressBooklist": "[]","entityType": "Member","degree": "","isAdmin": "false","customerProperties": "[]","v5External": "false","isAssignedStatus": "1","pinyin": "zhuyupeng","isAssigned": "true","weixin": "","eduBack": -1,"preName": "","guest": "false","pinyinhead": "zyp","isVirtual": "false","visitor": "false","status": "1","externalType": "0","politics": -1,"postAddress": "","valid": "true","screenGuest": "false","isDeleted": "false","weibo": "","postalcode": "","second_post": "[]","i18nNameWithLocale": "朱宇鹏","website": "","address": "","dataI18nCategoryName": "organization.member.name","isValid": "true","vJoinExternal": "false","fullName": "朱宇鹏","updateTime": "2024-08-12","extPostLevel": "","isLoginable": "true","concurrent_post": "[]","createTime": "2024-07-01","allDeptRoles": "部门主管,部门分管领导,部门管理员,部门公文收文员,部门公文送文员","location": "","defaultGuest": "false","idnum": "","properties": "{birthday=, politics=-1, website=, address=, imageid=, gender=-1, degree=, postAddress=, emailaddress=, reporter=-3438727471620601180, blog=, hiredate=, extPostLevel=, weixin=, weibo=, telnumber=, postalcode=, eduBack=-1, officenumber=, location=, idnum=}"}}
-
-	let {id, loginName, code, name, levelName, postName, sortId, departmentName} = data[0];
-	let assign_obj = {deptName: departmentName, primaryPost: postName, code, levelName}
+// 通过OA的用户ID批量修改密码
+function change_password_byId(ids = [], newpassword = "Aa@123456", interface=undefined) {
+	if(interface==undefined){
+		interface = $axios
+	}
+	ids = ids.join(',') + ','
 	let postdata = {
-		managerMethod: "viewOne",
-		arguments: `["${id}"]`
+		ids,
+		accountId: '1891172314314459061',
+		password: newpassword,
+		password2: newpassword
 	}
-	let ret = await $axios.post('http://10.10.10.20/seeyon/ajax.do?method=ajaxAction&managerName=memberManager&rnd=' + generateRandom5DigitNumber(), $qs.stringify(postdata))
-	ret = ret.data
-
-	for(let key in dict_obj.deleted){
-		delete ret[key]
-	}
-
-	ret.password = newpassword
-	ret.password2 = newpassword
-	ret.enabled = true
-	ret = [{...ret, ...dict_obj.added, ...assign_obj}]
-
-	postdata = {
-		managerMethod: "updateMember",
-		arguments: JSON.stringify(ret)
-	}
-	debugger
-	ret = await $axios.post('http://10.10.10.20/seeyon/ajax.do?method=ajaxAction&managerName=memberManager&rnd=' + generateRandom5DigitNumber(), $qs.stringify(postdata))
-	if(id == ret.data)
-		return {code: 0, msg: `${id}`}
-	else
-		return {code: 1, msg: `${login_name}修改失败`}
+	return interface.post('http://10.10.10.20/seeyon/organization/member.do?method=batchUpdatePwd', $qs.stringify(postdata))
 }
 
-async function findByLoginName(login_name){
+// 批量修改密码
+async function change_password(login_name, newpassword = "Aa@123456") {
+	let data = await findByLoginName(login_name)
 
+	if (data.length==0) return {code: 1, msg: `${login_name}查无此人`, data: null}
+	let ids = [], users = []
+	for(let i = 0; i<data.length; i++){
+		let {id, loginName, code, name, levelName, postName, sortId, departmentName} = data[i];
+		ids.push(id)
+		users.push({姓名:name, 账号:loginName, 单位:departmentName})
+	}
 	let postdata = {
-			managerMethod: 'showByAccount',
-			arguments:          `[{"page":1,"size":20},{"type":"input","condition":"loginName","value":"${login_name}","conditionVal":"eq","enabled":null,"accountId":"1891172314314459061"}]`
+		ids: ids.join(',') + ',',
+		accountId: '1891172314314459061',
+		password: newpassword,
+		password2: newpassword
 	}
 
-	let ret = await $axios.post('http://10.10.10.20/seeyon/ajax.do?method=ajaxAction&managerName=memberManager&rnd=' + generateRandom5DigitNumber(), $qs.stringify(postdata))
+	await $axios.post('http://10.10.10.20/seeyon/organization/member.do?method=batchUpdatePwd', $qs.stringify(postdata))
+	// {I:'-3116385039151185264',K:'刘远鑫',N:1105,C:0} 返回失败
+	return {code: 0, msg: '修改结果未知', data: users}
+}
+
+// 通过OA账号修改密码
+async function change_password_by_admin(login_name, newpassword = "Aa@123456", interface = undefined) {
+
+	let data = await findByLoginName(login_name)
+
+	if (data.length==0) return {code: 1, msg: `${login_name}查无此人`}
+
+	let ids = []
+
+	for(let i = 0; i<data.length; i++){
+		let dict_obj = {"added": {"passwordhide": "","extRoleIds": "","extWorkScopeValue": "","isChangePWD": "true","isLoginNameModifyed": "true","isNewLdap": "false","isNewMember": "false","checkOnlyLoginName": "false","i18nEnable": "false","ldapSetType": null,"ldapUserCodes": "","selectOU": "","extRoles": "","description": "","province": null,"city": null,"district": null,"workLocalCode": "","workLocalName": "","search_province": null,"search_city": null,"search_district": null,"search_workLocalCode": "","search_workLocalName": "","extAccountName": "","sortIdtype1": "0","sortIdtype2": null,"extprimaryPost": "","extlevelName": "","extWorkScope": "","workspace": "","workLocal": "","extgender": "-1","extbirthday": "","extdescription": ""},"deleted": {"v3xOrgPrincipal": "com.seeyon.ctp.organization.bo.V3xOrgPrincipal@69d3bbfc","realSortId": "12017","blog": "","reporterDeptTitle": "安全环保处","customerAddressBooklist": "[]","entityType": "Member","degree": "","isAdmin": "false","customerProperties": "[]","v5External": "false","isAssignedStatus": "1","pinyin": "zhuyupeng","isAssigned": "true","weixin": "","eduBack": -1,"preName": "","guest": "false","pinyinhead": "zyp","isVirtual": "false","visitor": "false","status": "1","externalType": "0","politics": -1,"postAddress": "","valid": "true","screenGuest": "false","isDeleted": "false","weibo": "","postalcode": "","second_post": "[]","i18nNameWithLocale": "朱宇鹏","website": "","address": "","dataI18nCategoryName": "organization.member.name","isValid": "true","vJoinExternal": "false","fullName": "朱宇鹏","updateTime": "2024-08-12","extPostLevel": "","isLoginable": "true","concurrent_post": "[]","createTime": "2024-07-01","allDeptRoles": "部门主管,部门分管领导,部门管理员,部门公文收文员,部门公文送文员","location": "","defaultGuest": "false","idnum": "","properties": "{birthday=, politics=-1, website=, address=, imageid=, gender=-1, degree=, postAddress=, emailaddress=, reporter=-3438727471620601180, blog=, hiredate=, extPostLevel=, weixin=, weibo=, telnumber=, postalcode=, eduBack=-1, officenumber=, location=, idnum=}"}}
+		let {id, loginName, code, name, levelName, postName, sortId, departmentName} = data[i];
+		ids.push(id)
+
+		let assign_obj = {deptName: departmentName, primaryPost: postName, code, levelName};
+		let postdata = {
+			managerMethod: "viewOne",
+			arguments: `["${id}"]`
+		}
+		debugger
+		let ret = await $axios.post('http://10.10.10.20/seeyon/ajax.do?method=ajaxAction&managerName=memberManager&rnd=' + generateRandom5DigitNumber(), $qs.stringify(postdata))
+		ret = ret.data
+
+		for(let key in dict_obj.deleted){
+			delete ret[key]
+		}
+
+		ret.password = newpassword
+		ret.password2 = newpassword
+		ret.enabled = true
+		ret = [{...ret, ...dict_obj.added, ...assign_obj}]
+
+		postdata = {
+			managerMethod: "updateMember",
+			arguments: JSON.stringify(ret)
+		}
+		debugger
+		ret = await $axios.post('http://10.10.10.20/seeyon/ajax.do?method=ajaxAction&managerName=memberManager&rnd=' + generateRandom5DigitNumber(), $qs.stringify(postdata))
+		if(id == ret.data)
+			return {code: 0, msg: `${id}`}
+		else
+			return {code: 1, msg: `${login_name}修改失败`}
+	}
+
+}
+
+async function findByLoginName(login_name, interface){
+
+	if(!interface)interface = $axios
+
+	let condition = "name"
+
+	if(/^[a-zA-Z0-9]+$/.test(login_name)){
+		condition = "loginName"
+	}
+
+	let postdata = {
+		managerMethod: 'showByAccount',
+		arguments: `[{"page":1,"size":200},{"type":"input","condition":"${condition}","value":"${login_name}","conditionVal":"eq","enabled":null,"accountId":"1891172314314459061"}]`
+	}
+
+	let ret = await interface.post('http://10.10.10.20/seeyon/ajax.do?method=ajaxAction&managerName=memberManager&rnd=' + generateRandom5DigitNumber(), $qs.stringify(postdata))
 	ret = ret.data
 
 	if(ret == "__LOGOUT"){
@@ -249,26 +415,55 @@ async function findByLoginName(login_name){
 }
 
 async function updataScore(saveType='6'){
+    let { value: datetext } = await Swal.fire({
+        input: 'textarea',
+        inputLabel: '粘贴',
+        inputPlaceholder: '日期:2024-08-01',
+        inputAttributes: {
+            'aria-label': 'Type your message here'
+        },
+        showCancelButton: true
+    })
+
+    if(datetext!=undefined){
+        datetext = datetext.replace(/[\r\n]/g,'').trim().split(',')
+        datetext = datetext.pop()
+    }
+
 	let querydata = $qs.parse($url.parse(location.href).query)
+//     querydata = {
+//         "method": "formContent", //固定值
+//         "type": "edit", //固定值
+//         "rightId": "-4408485026245754120.6282990285842105487", //修改页固定值
+//         "rightId": "-4408485026245754120.724471978296298154", //查询页固定值
+//         "moduleId": "-3032976671493830145", //有变化
+//         "formTemplateId": "7409407267762488441", //修改页固定值
+//         "columnId": "7409407267762488441", //修改页固定值
+//         "moduleType": "42" //固定值
+//     }
+
+    if(querydata.type == 'browse'){
+        querydata.type = 'edit'
+        querydata.rightId = "-4408485026245754120.6282990285842105487"
+        // await $axios.get('http://10.10.10.20/seeyon/cap4/businessTemplateController.do', $qs.stringify(querydata))
+    }
+
 	let b = {V: "V8_0SP2_220826_1108140",forceDb: true, operateType: "1"}
-	let c = {...querydata,...b, size:30, page: "1"}
+	let c = {...querydata,...b, size:20, page: "1"}
 
 	let ret = await $axios.post('http://10.10.10.20/seeyon/rest/cap4/form/createOrEdit',c)
-	ret = ret.data
-	ret = ret.data
-	ret = ret.data
+	ret = ret.data.data.data
+
 	ret.content.checkNull = '1'
 	ret.content.formsonNumThreshold = null
 	ret.content.iSignatureProtectedData = null
 	ret.content.needCheckCustom = '1' //有变化
 	ret.content.operateType = '1'
-	ret.content.saveType = `${saveType}` //先用6打分,然后用1完成考核
+	ret.content.saveType = `${saveType}` //6保存,1保存并关闭/下一条
 	ret.content.title = null
 
-	console.log(ret)
-
 	let content = ret.content
-	if(content.saveType == '6'){
+	if(content.saveType == '6'){ //好像不删除也行
 		delete content.formsonNumThreshold
 		delete content.iSignatureProtectedData
 		delete content.title
@@ -282,13 +477,33 @@ async function updataScore(saveType='6'){
 	Object.keys(fieldInfo).forEach(item=>{
 		formmain_4490[item] = fieldInfo[item].value
 	})
-	formmain_4490['field0030'] = fieldInfo['field0030'].showValue2
-	formmain_4490['field0034'] = fieldInfo['field0034'].showValue2
+	// 创建日期
+    debugger
+	let createDate = fieldInfo['field0030'].showValue2
+    if(datetext!=undefined && datetext!=""){
+        createDate = datetext
+        if(createDate.length==1){
+            createDate = `${new Date().getFullYear()}-0${createDate}-01`
+        }else if(createDate.length==2){
+            createDate = `${new Date().getFullYear()}-${createDate}-01`
+        }
+    }else{
+        createDate = fieldInfo['field0030'].showValue2
+    }
+	formmain_4490['field0030'] = createDate
+	// 考核日期
+	let 考核日期 = new Date(createDate)
+	考核日期.setMonth(考核日期.getMonth()+1)
+	考核日期.setDate(-1)
+	formmain_4490['field0034'] = 考核日期.format('yyyy-MM-dd')
+	//formmain_4490['field0034'] = fieldInfo['field0034'].showValue2;
 
-	if(saveType*1=='1'){
+	if(saveType*1=='1'|| true){
 		if(fieldInfo['field0037'].enums[0].enumValue == 0){
+			// 完成
 			formmain_4490['field0037'] = fieldInfo['field0037'].enums[0].id
 		}else{
+			// 未完成
 			formmain_4490['field0037'] = fieldInfo['field0037'].enums[1].id
 		}
 	}
@@ -309,35 +524,35 @@ async function updataScore(saveType='6'){
 	ret = ret.data
 
 	let pageData = ret.tableData.formson_4502.pageData.items
-	let formson_4502 = pageData.map(item=>{
+
+	let formson_4502 = pageData
+	for(let i = 0, randomItemId = $_.random(0,pageData.length-1); i<formson_4502.length; i++){
+		let item = formson_4502[i]
 		Object.keys(item).forEach(k=>{
 			if(/field/.test(k))
 				item[k] = item[k].value
 		})
 		item.id = item.recordId
 		delete item.recordId
-		item['field0026'] = item['field0024']
-		总分 += item['field0024']*1
-		return item
-	})
 
-	// let formson = ret.tableInfo.formson[0]
-	// let pageData = formson.pageData.items
-	// let formson_name = formson.tableName
+		// 任务完成情况 = 当月随机日期+工作内容
+        // 这里可能存在没有设置工作内容的情况
+		if(item['field0025']==undefined || item['field0025'].length<2){
+			let createDateObj = new Date(createDate)
+			item['field0025'] = getRandomDate(createDateObj.getFullYear(),createDateObj.getMonth()+1) + item['field0022']
+		}
 
-	// let formson_4502 = pageData.map(item=>{
-		// Object.keys(item).forEach(k=>{
-			// if(/field/.test(k))
-				// item[k] = item[k].value
-		// })
-		// item.id = item.recordId
-		// delete item.recordId
-		// item['field0025'] = "7月1日" + item['field0022']
-		// item['field0026'] = item['field0024']
-		// 总分 += item['field0024']*1
-		// return item
-	// })
+		// 子项得分 = 子项分值
+        // 这里有可能存在没有设置分值的情况
+		if(i == randomItemId){
+			item['field0026'] = '' + $_.random(item['field0024']<=3?0:(item['field0024']-3), item['field0024'])
+		}else{
+			item['field0026'] = item['field0024']
+		}
+		总分 += item['field0026']*1
+	}
 
+	// 得分
 	formmain_4490['field0027'] = `${总分}`
 
 	let pageInfo = {
@@ -347,24 +562,39 @@ async function updataScore(saveType='6'){
 		}
 	}
 
-	postdata = {
+	let _postdata = {
 		attachments: [],
 		content, formmain_4490, formson_4502, pageInfo
 	}
 	console.log(content, formmain_4490, formson_4502, pageInfo)
 
-	ret = await $axios.post('http://10.10.10.20/seeyon/rest/cap4/form/saveOrUpdate', postdata)
-	console.log(ret)
+	ret = await $axios.post('http://10.10.10.20/seeyon/rest/cap4/form/saveOrUpdate', _postdata)
+
+    await $axios.post('http://10.10.10.20/seeyon/rest/cap4/form/createOrEdit',c)
+    await $axios.post('http://10.10.10.20/seeyon/rest/cap4/form/detail/pageData', postdata)
+    await $axios.post('http://10.10.10.20/seeyon/rest/cap4/form/saveOrUpdate', _postdata)
+
+	console.warn('总分'+总分)
 	Swal.fire({
-		text: '成功',
+		text: '成功' + 总分,
 		icon: "success",
 		showCancelButton:false,
 		showConfirmButton:true,
-		buttons: true,
 	})
+
+// 	c.currentRightId = c.rightId.split('.').pop()
+// 	c.formMasterId = c.moduleId
+// 	c.forceDb = false
+// 	delete c.page
+// 	delete c.size
+//     setTimeout(async function(){
+//         await $axios.post('http://10.10.10.20/seeyon/rest/cap4/form/createOrEdit',c)
+//     },3000)
+
+
 	// location.reload()
 	if(saveType*1=='1'){
-		window.close()
+		// window.close()
 	}
 }
 
@@ -805,6 +1035,8 @@ function 一键确认() {
 	})
 }
 
+
+
 function 批量修改密码(){
 	let btn = document.createElement('button')
 	btn.id = 'btn1'
@@ -812,7 +1044,7 @@ function 批量修改密码(){
 	document.body.appendChild(btn)
 
 	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 10px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
-	btn.innerText = '批量修改密码'
+	btn.innerText = '批量修改'
 	btn.addEventListener('click', async function(){
 		let { value: text } = await Swal.fire({
 			input: 'textarea',
@@ -830,12 +1062,16 @@ function 批量修改密码(){
 		}
 		text = text.trim().split('\n').filter(item=>item.trim()!='')
 
-		let instance = await loginOA('liuyuanxin', 'Aa123456')
+		let instance = await loginOA('liuyuanxin', 'Aa@123456')
 
 		if(instance){
 			let result = []
 			for(let t of text){
-				result.push(change_password_by_admin(t, 'Aa@123456'))
+				if(/^[a-zA-Z0-9]+$/.test(t)){
+					result.push(change_password_by_admin(t, 'Aa@123456'))
+				}else{
+					result.push(change_password(t, 'Aa@123456'))
+				}
 			}
 			Promise.all(result).then(res=>{
 				alert(JSON.stringify(res))
@@ -850,7 +1086,7 @@ function 登录OA(){
 
 	document.body.appendChild(btn)
 
-	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 1000px; bottom: 580px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
+	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; bottom: 10px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
 	btn.innerText = '登录'
 	btn.addEventListener('click', async function(){
 		let { value: text } = await Swal.fire({
@@ -890,7 +1126,7 @@ function 打分(){
 	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 80px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
 	btn.innerText = '打分'
 	btn.addEventListener('click', async function(){
-		await updataScore(6)
+		//await updataScore(6)
 		await updataScore(1)
 	})
 }
@@ -906,40 +1142,134 @@ function 保密刷课(){
 	btn.addEventListener('click', async function(){
 		let hehe = function (t=0){
 			let that = $$('.informationDetails')[0].__vue__
-		    let e = that.playItem
+			let e = that.playItem
 
-		    var r = {
-		        courseId: that.$route.query.id,
-		        resourceId: e.resourceID,
-		        resourceDirectoryId: e.SYS_UUID,
-		        resourceLength: e.resourceLength,
-		        studyLength: parseInt(e.studyLength),
-		        studyTime: parseInt(e.studyTime),
-		        startTime: (new Date).getTime(),
-		        resourceName: e.name,
-		        resourceType: e.resourceType,
-		        resourceLibId: e.docLibId,
-		        studyResourceId: e.docId,
-		        orgId: that.item.orgId,
-		        token: window.localStorage.getItem("webToken")
-		    }
-		    if(t==0){
-		    	r.studyTime = 180
-		    }else{
-		    	r.studyLength = r.resourceLength
-		    }
-		    debugger
-		    return r
+			var r = {
+				courseId: that.$route.query.id,
+				resourceId: e.resourceID,
+				resourceDirectoryId: e.SYS_UUID,
+				resourceLength: e.resourceLength,
+				studyLength: parseInt(e.studyLength),
+				studyTime: parseInt(e.studyTime),
+				startTime: (new Date).getTime(),
+				resourceName: e.name,
+				resourceType: e.resourceType,
+				resourceLibId: e.docLibId,
+				studyResourceId: e.docId,
+				orgId: that.item.orgId,
+				token: window.localStorage.getItem("webToken")
+			}
+			if(t==0){
+				r.studyTime = 180
+			}else{
+				r.studyLength = r.resourceLength
+			}
+			debugger
+			return r
 		}
 		await $axios.get("/portal/main-api/v2/studyTime/saveCoursePackage.do",{params: hehe(0)})
 		await $axios.get("/portal/main-api/v2/studyTime/saveCoursePackage.do",{params: hehe(1)})
 	})
 }
 
+function 导出考核表(){
+	let btn = document.createElement('button')
+	btn.id = 'btn1'
+
+	document.body.appendChild(btn)
+
+	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 80px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
+	btn.innerText = '导出'
+	btn.addEventListener('click', 导出责任制考核表)
+}
+
+async function 导出责任制考核表(){
+    let postdata = {
+        "formId": "-3522449047312448316",
+        "formTemplateId": "3484544434552916574",
+        "init": "0",
+        "userConditions": [
+            {
+                "aliasTableName": "formmain_4490",
+                "fieldName": "field0017",
+                "fieldValue": [
+                    "Account|1891172314314459061"
+                ],
+                "leftChar": "(",
+                "operation": "Equal",
+                "rightChar": ")",
+                "rowOperation": "and",
+                "fieldType": "VARCHAR",
+                "inputType": "account"
+            }
+        ],
+        "userOrderBy": [],
+        "dataConditions": [],
+        "bussId": "-5057417996438581887",
+        "appId": "3484544434552916574",
+        "_t": "1725502718240",
+        "isShowCondition": true,
+        "schlogId": null,
+        "preview": null,
+        "conditionId": null,
+        "templateId": null,
+        "isMobile": false,
+        "print": false,
+        "bizId": "-5057417996438581887",
+        "platform": "1",
+        "page": "1",
+        "pageSize": "30000"
+    }
+    // postdata.userConditions = []
+    let d = await $axios.post('http://10.10.10.20/seeyon/rest/cap4/form/getCAPFormUnFlowList', postdata)
+
+    let fieldnames = d.data.data.data.fields
+    let datas = d.data.data.data.datas
+    let total = d.data.data.data.total
+    let xlsheader = ['序号'], xlscontent = []
+    for(let i = 0; i<fieldnames.length; i++){
+        let fieldname = fieldnames[i]
+        xlsheader.push(fieldname.display)
+        let k = fieldname.fieldName, v = []
+        for(let j = 0; j<datas.length; j++){
+            v.push(datas[j][k].value)
+        }
+        xlscontent.push({[fieldname.display]: v})
+    }
+    xlsheader = [xlsheader.join(',')]
+    // for(let a of xlscontent){
+    //     let k = Object.keys(a).join()
+    //     a[k] = a[k].slice(0,3)
+    // }
+
+    let rows = []
+    // 遍历每个数组，按索引组合数据
+    for (let i = 0; i < total; i++) {
+        let row = [i+1];
+        // 遍历每个对象
+        for (const obj of xlscontent) {
+            let key = Object.keys(obj)[0]; // 假设每个对象只有一个key
+            let value = obj[key][i] || ''; // 如果索引超出数组长度，则使用空字符串
+            row.push(value);
+        }
+        debugger
+        row.push()
+        // 将当前行添加到结果数组中
+        rows.push(row.join(','));
+
+    }
+    // 将结果数组转换为字符串，并添加表头
+    let result = xlsheader.concat(rows).join('\n');
+    console.log(result);
+
+    $saveas(new Blob([result], {type: "text/plain;charset=utf-8"}), `责任考核清单.csv`)
+}
+
+
 if(/10\.10\.54\.18/.test(location.href)){
 	// 新增组()
 	// 批量删除()
-	批量修改()
+	// 批量修改()
 }
 else if (/10\.10\.15\.32/.test(location.href)) {
 	一键确认()
@@ -950,6 +1280,7 @@ else if (/10\.10\.15\.32/.test(location.href)) {
 	//登录OA()
 	//批量修改密码()
 	//打分()
+    导出考核表()
 }else if(/10.10.10.10\/appsystem\/classify\/*/.test(location.href)){
 	筛选制度()
 }else if(/www.baomi.org.cn/.test(location.href)){

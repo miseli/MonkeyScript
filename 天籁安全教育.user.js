@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         天籁安全教育
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      20250707
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.tlsafety.com/*
@@ -45,6 +45,7 @@ function shuake(vid = undefined) {
     if (vid == undefined) {
         vid = location.href.match(/vid\=(\d+)/)[1]
     }
+
     return $.get('https://www.tlsafety.com/Home/Index/videoplay?vid=' + vid).then(res => {
         try{
             let mp4url = res.match(/src="(.+\.mp4)"/)[1]
@@ -64,13 +65,13 @@ $(function() {
     btn.prependTo('body')
     btn.css({position: 'fixed', top: 0, left: 0, 'z-index': 99999})
     btn.click(function() {
-        $(this).toggle()
-        $('#collapse_progress tr[id]').each((id, it) => {
-            let vid = $(it).find('a')[0].href.match(/vid\=(\d+)/)[1],
-                progress = $(it).find('.progress div'),
+        //$(this).toggle()
+        $('#videopanel > table > tbody > tr > td:nth-child(2) > ul > li[data-vid]').each((id,it) => {
+            let vid = $(it).data().vid,
+                progress = $(it).find('div.progress-bar.progress-bar-success'),
                 btn = $('<button class="btn">刷课</button>')
             btn.data('data', {vid, progress})
-            btn.appendTo($(it).find('td')[2])
+            btn.appendTo($(it).find('.title')[0])
             btn.click(function() {
                 let data = $(this).data('data')
                 shuake(data.vid).then(res=>{

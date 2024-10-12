@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         LocalMonket
 // @namespace    http://tampermonkey.net/
-// @version      1.5.6.2024.8.17
+// @version      1.5.7.2026.09.09
 // @description  relayout pages on browsing webpages
 // @author       Cube
 // @match        *://*/*
@@ -21,7 +21,8 @@
 // @exclude      *://*.aliyun.com/*
 // @exclude      *://localhost:8080/*
 // @license      MIT
-// @require      file:///D:/Dist/main.js
+//// @require      file:///D:/Dist/main.js
+// @require      file:///G:/Users/Administrator/Desktop/桌面/personal/MonkeyToolCollection/dist/main.js
 
 // @run-at       document-start
 // @grant        unsafeWindow
@@ -31,6 +32,7 @@
 
 // js的页面生命周期 https://www.jianshu.com/p/5674c4cd9f3a
 // 如果grant使用unsafeWindow,则window对象会被包装,使用unsafeWindow访问原生window.使用none则不然
+// @webRequest 已经弃用,>v5.3无法使用
 // @webRequest   {"selector":{"include":"*://*vue.min.js", "exclude": "*://purge.jsdelivr.net/*"},"action":{"redirect":"https://cn.vuejs.org/js/vue.js"}}
 
 // 猴子文档地址
@@ -61,6 +63,9 @@ $$($0).data('find', false).parents().each((i,a)=>{
 // 王彦军
 // cookiestxtpwd=224a08b570d10b63; cookiestxtuser=wyj; ASPSESSIONIDACRDSTBA=BMHJFNOBPPPAIMNPGMBJHBBL; usrid=39; cookiesname=%CD%F5%D1%E5%BE%FC; logoid=587270
 
+// 管理员
+// ASPSESSIONIDAAQASRDB=NEENHAKBIFLAAJEDLMNFFNPH; logoid=722182; cookiestxtpwd=; cookiestxtuser=glryc; usrid=325; cookiesname=%B9%DC%C0%ED%C8%CB%D4%B1%B4%A6
+
 /*
 let c = 'cookiestxtpwd=224a08b570d10b63; cookiestxtuser=wyj; ASPSESSIONIDACRDSTBA=BMHJFNOBPPPAIMNPGMBJHBBL; usrid=39; cookiesname=%CD%F5%D1%E5%BE%FC; logoid=587270'.replaceAll(/ +/g,'')
 let d = c.split(';')
@@ -70,6 +75,7 @@ for(let item of d){
 }
 
 let c = 'cookiestxtpwd=224a08b570d10b63; cookiestxtuser=wyj; ASPSESSIONIDACRDSTBA=BMHJFNOBPPPAIMNPGMBJHBBL; usrid=39; cookiesname=%CD%F5%D1%E5%BE%FC; logoid=587270'.replaceAll(/ +/g,'')
+let d = c.split(';')
 for(let item of d){
 	console.log(item)
 	$cookies.set.apply(window, item.split('='))
@@ -81,18 +87,18 @@ framedocument = document.getElementById('mainFrame1').contentDocument || $("#mai
 
 // 全民K歌曲
 // $ajax.get('https://node.kg.qq.com/cgi/fcgi-bin/kg_ugc_get_homepage',{
-// 	params:{
-// 		jsonpCallback: 'cube',
-// 		type:'get_uinfo',
-// 		start: 1,
-// 		num: 15,
-// 		share_uid: '6a959f842424338b'
-// 	}
+//     params:{
+//         jsonpCallback: 'cube',
+//         type:'get_uinfo',
+//         start: 1,
+//         num: 15,
+//         share_uid: '6a959f842424338b'
+//     }
 // }).then(function(res){
-// 	let cube = function(data){
-// 		console.log(data.data.ugclist)
-// 	}
-// 	eval(res.data)
+//     let cube = function(data){
+//         console.log(data.data.ugclist)
+//     }
+//     eval(res.data)
 // })
 
 // hex转string
@@ -102,17 +108,17 @@ framedocument = document.getElementById('mainFrame1').contentDocument || $("#mai
 // 浏览器标签页显示与隐藏事件 visibilitychange
 // 网页关闭先执行onbeforeunload,再执行window.onunload
 // window.document.addEventListener('visibilitychange', function() {
-// 	if (window.document.visibilityState === 'visible') {
-// 		console.log('我回来了',this, new Date().toLocaleTimeString(), {begintime, randomTime})
-// 	} else if (window.document.visibilityState === 'hidden') {
-// 		console.log('我离开一会',this, new Date().toLocaleTimeString(), {begintime, randomTime})
-// 	}
+//     if (window.document.visibilityState === 'visible') {
+//         console.log('我回来了',this, new Date().toLocaleTimeString(), {begintime, randomTime})
+//     } else if (window.document.visibilityState === 'hidden') {
+//         console.log('我离开一会',this, new Date().toLocaleTimeString(), {begintime, randomTime})
+//     }
 // });
 
 /******************************* Common Start ********************************/
 
 /* 异步加载script脚本 */
-function asyncloadScript(url){
+function asyncLoadScript(url){
 	return new Promise((resolve, reject)=>{
 		let script = document.createElement('script')
 		script.type = 'text/javascript'
@@ -137,14 +143,40 @@ function asyncloadScript(url){
 
 // Promise.all([asyncloadScript('https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.js'),
 // asyncloadScript('https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.11.0/sweetalert2.all.js')]).then(res=>{
-// 	console.log('脚本加载完成', res)
+//  console.log('脚本加载完成', res)
 // })
+// let cdnlist = [
+//   'https://unpkg.com/ajax-hook@2.0.3/dist/ajaxhook.min.js',
+//   'https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.14.4/sweetalert2.all.min.js',
+//   'https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js',
+//   'https://cdnjs.cloudflare.com/ajax/libs/marked/14.1.3/marked.min.js',
+//   'https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/11.1.0/jsrsasign-all-min.js',
+//   'https://cdnjs.cloudflare.com/ajax/libs/pinyin-pro/3.26.0/index.min.js',
+// ]
 
-function addScript(func_text){
+function add_style(style_text){
+	let s = unsafeWindow.document.createElement('style')
+	s.type = 'text/css'
+	s.textContent = style_text
+	unsafeWindow.document.head.appendChild(s)
+	console.log(s)
+}
+
+function add_script(script_text){
 	let s = unsafeWindow.document.createElement('script')
-	s.text = func_text
+	s.text = script_text
 	unsafeWindow.document.body.appendChild(s)
 	console.log(s)
+}
+
+function AddScript(src) {
+	var s = $$('<script>').attr("src", src)
+	$$("head").append(s[0])
+}
+
+function AddCss(src) {
+	var s = $$('<link>').attr({ href: src, rel: "stylesheet" })
+	$$("head").append(s[0])
 }
 
 /* 创建一个按钮 */
@@ -153,7 +185,7 @@ function addScript(func_text){
  * @param {function}  clickEventFn 按钮单击事件函数
  * @param {Boolean} hover        是否隐藏按钮
  */
-function addButton(options, clickEventFn, ishover) {
+function addButton(clickEventFn, options, ishover) {
 	const defaultOptions = {
 		text: '点击我',
 		width: '76px',
@@ -163,7 +195,7 @@ function addButton(options, clickEventFn, ishover) {
 		color: 'white',
 		background: '#006158',
 		border: '#cecfcf solid 1px',
-		callback: (e)=>{console.log(e)},
+		callback: (e)=>{console.log(e);clickEventFn(e)},
 		hover: true
 	}
 	if(typeof(options)=='string'){
@@ -373,6 +405,93 @@ function aes_encrypt(text, rkey){
 
 /******************************** Common End *********************************/
 
+function 自动刷新进出记录(){
+	let style = document.createElement('style')
+	style.innerText = `
+	#btn1:hover {
+		right: 0px;
+	}
+
+	#btn1 {
+		color: white;
+		cursor: pointer;
+		background: rgb(0, 97, 88);
+		border-radius: 3px;
+		width: 76px;
+		height: 34px;
+		right: -66px;
+		bottom: 30px;
+		position: absolute;
+		z-index: 99999;
+		border: 1px solid rgb(206, 207, 207);
+		transition: right 0.2s cubic-bezier(0.55, 0.06, 0.68, 0.19)
+	}`
+
+	let btn = document.createElement('button')
+	btn.id = 'btn1'
+
+	document.body.appendChild(btn)
+	document.head.appendChild(style)
+
+	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 30px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
+	btn.innerText = '自动更新'
+	btn.addEventListener('click',function () {
+		new $swal('开始检查')
+		let doClick = ()=>{
+			console.warn('刷新')
+			$$('#app > div > div.h-page-content > div.h-page-search.row-amount-4 > form > div.h-page-search__action > button.el-button.el-button--primary, #app > div > div.h-page-content > div.h-page-search.row-amount-6 > form > div.h-page-search__action > button.el-button.el-button--primary').trigger('click')
+		}
+		let tid = 0, pre = ''
+		const handler = async function() {
+
+			let beginDate = new Date(),
+				endDate = new Date()
+			beginDate.setHours(8,0,0,0)
+			beginDate = beginDate.toISOString().replace(/Z$/,'+08:00')
+			endDate.setHours(31,59,59,999)
+			endDate = endDate.toISOString().replace(/Z$/,'+08:00')
+			let postdata = {
+				// "organization": "8a4903423be1411c90b2b316c29a6dd1",
+				"doorRegionIndexCode": "e1429a6716b5452fa73066a27eac0b52",
+				"isPic": 2,
+				"pageSize": 100,
+				"pageNo": 1,
+				"subOrg": 1,
+				"pageType": "1",
+				"isEncrypt": 1,
+				// "beginDate": "2024-09-17T00:00:00.000+08:00",
+				// "endDate": "2024-09-17T23:59:59.999+08:00",
+				beginDate,
+				endDate,
+				"extendPropertys": "{}"
+			}
+
+			let r = await $axios.post('https://10.10.54.18/acs/ui/v1/accessEventQuery/searchEventLog', postdata).then(res => {
+				let tmp_personId = res.data.data.rows[0].personId,
+					ret = false
+				console.log(res.data.data.rows)
+				let {personName, personId} = res.data.data.rows[0]
+				console.warn({personName, personId, pre})
+				if (pre == '') {
+					pre = tmp_personId
+				} else {
+					if (pre != tmp_personId) {
+						pre = tmp_personId
+						ret = true
+					}
+				}
+				return ret;
+			})
+			if(r){
+				doClick()
+			}
+			clearInterval(tid)
+			tid = setInterval(handler, 30000)
+		}
+		handler()
+	})
+}
+
 (function() {
 	'use strict';
 	let module = {...GM_info.Cube};
@@ -398,24 +517,18 @@ function aes_encrypt(text, rkey){
 		console.log('日志',location.href)
 		//jq.css不支持添加important样式,要么用jq.attr,要么用原生.
 		// if(location.host != 'github1s.com'&&location.host != '192.168.1.102:8080'&&location.host != 'winmicr-3ne6125:8080'){
-		// 	$$("body")[0].style.setProperty("background","#CCE8CC","important")
-		// 	$$("body")[0].style.setProperty("background-color","#CCE8CC","important")
+		//     $$("body")[0].style.setProperty("background","#CCE8CC","important")
+		//     $$("body")[0].style.setProperty("background-color","#CCE8CC","important")
 		// }
-		// 辽宁干部在线学习网(新版)
-		if(/zyjstest\.lngbzx\.gov\.cn/.test(location.href)){
+		// 辽宁干部在线学习网(新版),进入开始学习中单独刷 2025年更新
+		if(/zyjs\.lngbzx\.gov\.cn.+video_detail/.test(location.href)){
 			// return
-			let nbtn = $$(`<button>跳过开始画面</button>`)
-			$$('body').append(nbtn)
-			nbtn.attr('style',`color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 30px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `)
-			nbtn.click(function(){
-				$$('body > div.el-message-box__wrapper,body > div.v-modal').remove()
-			})
-
-			nbtn = $$(`<button>刷单课</button>`)
+			let nbtn = $$(`<button>刷单课</button>`)
 			$$('body').append(nbtn)
 			nbtn.attr('style',`color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 80px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `)
-			nbtn.click(async function(){
-				let d = {"playCourse":"d1badf044b5c4c4a8c14537ccf14328b","user_course_id":14747131,"scormData":[{"sco_id":"res03","lesson_location":"30","session_time":30}]}
+			let getcourseinfo = async function(){
+				/* 进入视频页获取课程信息 */
+				let d = {"playCourse":"d1badf044b5c4c4a8c14537ccf14328b","user_course_id":14747131,"scormData":[{"sco_id":"res01","lesson_location":"30","session_time":30}]}
 				let dd = d.scormData[0]
 
 				let el = $$('div.bodys.is_cont')[0].__vue__
@@ -425,14 +538,71 @@ function aes_encrypt(text, rkey){
 				d.user_course_id = user_course_id
 				dd.lesson_location = 60*60
 				dd.session_time = 60*60
-				let ret = await $axios.post('https://zyjstest.lngbzx.gov.cn/trainee/index/user_course', d, {headers:{Signature:'adfasfsdaffsdafsdafaj'}})
-				ret = ret.data
-				if(ret.code!=0){
-					alert('错误')
-				}else{
-					alert(ret.message)
-				}
-				console.log(ret)
+				return [d];
+			}
+
+
+			/* 函数内周期刷课,刷完返回*/
+			let shuakehandler = async function() {
+				let d = await getcourseinfo()
+				d = d[0]
+				return new Promise(async function(resolve, reject) {
+					async function inhandler(d) {
+						let tid = setTimeout(function() {
+							inhandler(d)
+						}, 16000)
+						let _axios = $axios.create({ headers: { Signature: 'adfasfsdaffsdafsdafaj' } })
+						let ret = await _axios.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d)
+						ret = ret.data
+						if (ret.code != 0) {
+							console.log('错误', d)
+							reject('错误', d)
+							clearTimeout(tid)
+						} else {
+							if ('cheat' in ret.data) {
+								//alert(ret.data.message)
+								console.log(ret.data.message, ret.data.learning_progress, new Date().toLocaleTimeString())
+							} else {
+								//alert(ret.message)
+								console.log(ret.message, ret.data.learning_progress, new Date().toLocaleTimeString())
+								if (ret.data.learning_progress >= 100 || ret.data.learning_progress == undefined) {
+									console.log('完成', d)
+									resolve('完成', d)
+									clearTimeout(tid)
+									return true
+								}
+							}
+						}
+					}
+					inhandler(d)
+				})
+			}
+
+			nbtn.click(shuakehandler)
+		}
+		// 辽宁干部在线学习网(新版),在未完成列表中批量刷
+		if(/zyjs\.lngbzx\.gov\.cn.+study_center\/my_course/.test(location.href)){
+			let custom_btn_side = `
+			.custom_btn_side{
+				color: white;
+				background: #006158;
+				border-radius: 3px;
+				width: 76px;
+				height: 34px;
+				right: 0px;
+				bottom: 30px;
+				position: fixed;
+				z-index: 99999;
+				border: #cecfcf solid 1px;
+			}`
+
+			add_style(custom_btn_side)
+
+			let nbtn = $$(`<button type="button">批量</button>`)
+			$$('body').append(nbtn)
+			nbtn.addClass('custom_btn_side')
+			nbtn.click(async function(e){
+				await 批量刷(e)
 			})
 		}
 		//获取行政公文
@@ -538,27 +708,34 @@ function aes_encrypt(text, rkey){
 		}
 		// OA平台
 		if(/\d+\.\d+\.\d+\.\d+.+\/seeyon\/main.do\?method=main/.test(location.href)){
+			console.log('OA平台')
 			setTimeout(()=>{
+				return
+				$$('.lev1Li:contains("责任")').hide()
+				$$('.lev1Li:contains("HR")').hide()
+			},500)
+			let 跳过改密码 = function(){
 				let btn = $(`
-<div id="cube" style="
-	width: 350px;
-	height: 51px;
-	font-size: 2em;
-	border: 0px;
-	border: 1px solid #e4e4e4;
-	background: #fafafa;
-	box-shadow: 0 0 10px #333;
-	overflow: hidden;
-	position: fixed;
-	top: 113px;
-	left: 781px;
-	z-index: 9999999;
-	color: #ef0303;
-	font-weight: 900;
-	text-align: center;
-	cursor: pointer;
-">双击我</p></div>
-			`)
+					<div id="cube" style="
+						width: 350px;
+						height: 51px;
+						font-size: 2em;
+						border: 0px;
+						border: 1px solid #e4e4e4;
+						background: #fafafa;
+						box-shadow: 0 0 10px #333;
+						overflow: hidden;
+						position: fixed;
+						top: 113px;
+						left: 781px;
+						z-index: 9999999;
+						color: #ef0303;
+						font-weight: 900;
+						text-align: center;
+						cursor: pointer;
+					">双击我</p></div>
+				`)
+
 				if($("#pwdMessageBox").length>0)
 					$("body").append(btn)
 				btn.dblclick(function(){
@@ -578,7 +755,8 @@ function aes_encrypt(text, rkey){
 				$("#layui-layer1").remove()
 				$("#pwdMessageBox").remove()
 				*/
-			},500)
+			}
+			setTimeout(跳过改密码(),500)
 		}
 		//国家中小学智慧教育
 		if(/basic.smartedu.cn\/teacherTraining\/courseDetail/.test(location.href)){
@@ -998,10 +1176,6 @@ function aes_encrypt(text, rkey){
 			$$("body").html($markdown(text))
 			$addcss("file:///J:/Users/Cube/Documents/%E8%87%AA%E5%AD%A6/JavaScript/markdown%E7%BC%96%E8%BE%91%E5%99%A8/bootstrap.min.css")
 		}
-		if (/www.sublimetext.cn/.test(location.href)) {
-			console.log('sublime 文档')
-			let btn = $totop().data('speed',200).appendTo("body")
-		}
 		// 解锁网页复制功能,道客88
 		if (/www.doc88.com/.test(location.href)){
 			console.warn('解锁复制功能')
@@ -1028,10 +1202,45 @@ function aes_encrypt(text, rkey){
 				unsafeWindow.document.body.oncopy = oncopy //360doc
 			},1000)
 		}
-		// 吾爱破解样式修改吾爱破解样式修改
+		// 吾爱破解样式修改,签到不跳转
 		if(/www.52pojie.cn/.test(location.href)){
 			console.log('吾爱破解样式修改')
-			return
+			let onloadfun = debounce(function (){
+					var iframeDocument = document.getElementById('myiframe').contentDocument || document.getElementById('myiframe').contentWindow.document;
+					// 确保iframe内容完全加载完成
+					if (iframeDocument.readyState === 'complete') {
+						// 执行你需要的操作
+						console.log('Iframe content is loaded and JavaScript has executed.');
+						alert('iframe全部加载完毕')
+					}
+				},5000)
+			// 自动签到1
+			let autoqiandao1 = function(){
+				let f = $$('<iframe id="myiframe" hidden src="https://www.52pojie.cn/home.php?mod=task&do=apply&id=2&referer=%2Fforum.php%3Fmod%3Dguide%26view%3Dhot">')
+				f[0].onload = onloadfun
+				f.appendTo('body')
+			}
+
+			// 自动签到2 失效
+			let autoqiandao2 = function(){
+				$ajax.get('https://www.52pojie.cn/home.php?mod=task&do=apply&id=2').then(res=>{
+					if(res.status==200){
+						let text = res.data
+						if(/请开启JavaScript并刷新该页/.test(text)){
+							let cb = GM_openInTab('https://www.52pojie.cn/home.php?mod=task&do=apply&id=2', {active: false,insert:true})
+							cb.onclose = ()=>{
+								this.innerText = "已经签到"
+								$$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
+							}
+							setTimeout(()=>{cb.close()}, 3000)
+						}else{
+							this.innerText = "已经签到"
+							$$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
+						}
+					}
+				})
+			}
+
 			// 加载下一页
 			let loadd_nextpage = function(nextpage_url){
 				$ajax.get(nextpage_url).then(function(res){
@@ -1049,22 +1258,9 @@ function aes_encrypt(text, rkey){
 				let state = !($$(this).attr('src')=='https://static.52pojie.cn/static/image/common/qds.png')
 				// console.log(state,this)
 				if(!state){
-					$ajax.get('https://www.52pojie.cn/home.php?mod=task&do=apply&id=2').then(res=>{
-						if(res.status==200){
-							let text = res.data
-							if(/请开启JavaScript并刷新该页/.test(text)){
-								let cb = GM_openInTab('https://www.52pojie.cn/home.php?mod=task&do=apply&id=2', {active: false,insert:true})
-								cb.onclose = ()=>{
-									this.innerText = "已经签到"
-									$$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
-								}
-								setTimeout(()=>{cb.close()}, 3000)
-							}else{
-								this.innerText = "已经签到"
-								$$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
-							}
-						}
-					})
+					autoqiandao1()
+					this.innerText = "已经签到"
+					$$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
 				}else{
 					alert('已经签到')
 				}
@@ -1072,7 +1268,7 @@ function aes_encrypt(text, rkey){
 			// return;
 			// 美化,增加折叠框
 			// $$("#separatorline").prevAll("tbody").each((i,item)=>{
-			// 	try{toggle_collapse(item.id)}catch(e){}
+			//     try{toggle_collapse(item.id)}catch(e){}
 			// })
 
 			$$("[id^=stickthread]").toggle()
@@ -1290,6 +1486,13 @@ function aes_encrypt(text, rkey){
 			console.log('golang中文网')
 			$$(".sidebar").hide().parents(".row").children("div:first").css({width:"100%"})
 		}
+        if(/service-cdn.qiqiuyun.net\/js-sdk-v2\/media-player\/.+player.html/.test(location.href)){
+            let btn = addButton(function(){
+                let pl = document.getElementById('example_media_1_html5_api')
+                pl.currentTime = 3600*3
+                pl.play()
+            });
+        }
 		if(/cdn.jsdelivr.net/.test(location.host)) {
 			console.log('jsdelivr CDN')
 			const toast = $$('<span>')
@@ -1330,6 +1533,32 @@ function aes_encrypt(text, rkey){
 			.click(function(){$$.getJSON(location.href.replace(location.host, 'purge.jsdelivr.net')).then(res=>{toast[0].innerText = JSON.stringify(res).replaceAll(',',',\n'); toast.show()})})
 			.appendTo(document.body)
 
+		}
+		// 安全生产管控平台
+		if(/http:\/\/10\.10\.15\.130/.test(location.href)){
+			console.log('安全生产管控平台,去掉右上角消息弹窗')
+			let b = function () {
+				var a = setInterval(function() {
+					$$('.ant-notification.ant-notification-topRight').hide()
+					console.log(Date.now())
+					clearInterval(a);
+					b();
+				}, 3*1000);
+			}
+			b();
+		}
+
+		// 集团门禁系统
+		if(/https:\/\/10.10.54.18\/acs\/app\/events\/inAndOutHistory/.test(location.href)){
+			console.log('门禁系统自动刷新进出记录', 'https://10.10.54.18/acs/app/events/inAndOutHistory')
+			自动刷新进出记录()
+		}
+
+		if(/10.10.15.125/.test(location.href)){
+			console.log('定位系统,删除警告')
+			setInterval(()=>{
+				$$('.warning-overlay').remove()
+			},1000)
 		}
 		// 快看66 视频播放 父页面
 		if(/kuaikan\d+.com/.test(location.host) ||/zhuijuku.com/.test(location.host)|| /kk6080.cn/.test(location.host)){
@@ -1428,8 +1657,6 @@ function ClearChromeHistoryByConsole(){
 
 unsafeWindow.addButton = addButton
 
-
-
 /*
 酷狗音乐
 function hehe(res){
@@ -1451,3 +1678,180 @@ function hehe(res){
 	})
 })()
 */
+
+/* 2025年更新 */
+async function 批量刷(e){
+	if(e.target?.running!=undefined){
+		$swal.fire(e.target.running)
+		return;
+	}
+
+	let _ajax = $axios.create({headers:{Signature:'adfasfsdaffsdafsdafaj'}})
+
+	// 定期发送心跳包,维持登录状态
+	let keepping = function(_ajax){
+		let t = new Date().toLocaleTimeString()
+		let tid_ = setInterval(async function(){
+			console.warn(`${new Date().toLocaleTimeString()} 心跳一次`)
+			let ret = _ajax.get('https://zyjs.lngbzx.gov.cn/trainee/api/login/keep_live')
+			ret = await _ajax.post('https://zyjs.lngbzx.gov.cn/trainee/login/status?userInfo=',{})
+			if(ret.data.data?.realname==undefined){
+				console.error(new Date().toLocaleTimeString())
+				clearInterval(tid)
+				alert(`${t} 挂机\r\n${new Date().toLocaleTimeString()} 掉线`)
+			}
+		},10*60*1000)
+	}
+	keepping(_ajax)
+
+	// 获取课程列表
+	let sss = await _ajax.post('https://zyjs.lngbzx.gov.cn/trainee/api/course/uncompleted?currentPage=1&pageSize=50&year='+new Date().getFullYear(),{})
+	// let courses = $$('.is_cont > div').last()[0].__vue__.course_list.courses
+	let courses = sss.data.data.courses
+	console.info('所有课程:', courses)
+	alert(`共计${courses.length}个课程\r\n开始学习`)
+
+	// 遍历课程列表,逐个刷课
+	let m_ajaxs = [], ajax_data_list = [], progress_index = 0
+	for(let {id, is_completed, course_name} of courses){
+
+		//更新进度
+		$$(e.target).text(`进度${progress_index}/${courses.length}`)
+		$$(e.target).attr({title: course_name})
+
+		let lis = courses.map((item, index, _this)=>{
+			if(index<progress_index){
+				return `<li style="color:green;">${item.course_name}</li>`
+			}else if(index==progress_index){
+				return `<li style="font-weight: bold;">${item.course_name}</li>`
+			}else{
+				return `<li>${item.course_name}</li>`
+			}
+		})
+
+		e.target.running = {
+			title: `当前进度${progress_index}/${courses.length}`,
+			html: `
+				<div style="padding-left: 22px;">
+					<ol style="list-style-type: decimal;text-align: left;max-height: 400px;font-family: fangsong;">
+					${lis.join('')}
+					</ol>
+				</div>
+			`
+		}
+
+		progress_index++;
+
+		// console.log({id,is_completed,course_name})
+		if(is_completed){
+			continue
+		}
+		let ret, data;
+		let playCourse, user_course_id, lesson_location, session_time;
+
+		// 获取playCourse
+		ret = await _ajax.get(`https://zyjs.lngbzx.gov.cn/trainee/api/course/play/${id}`)
+		data = ret.data
+		/*data = {
+			"code": 0,
+			"message": "操作成功",
+			"data": {
+			"playCourse": "04829a88cc284e3a907aa1be0f675764"
+			}
+		}*/
+
+		playCourse = data.data.playCourse
+
+		// 获取课程信息
+		ret = await _ajax.get(`https://zyjs.lngbzx.gov.cn/trainee/api/course/detail/${id}`)
+		data = ret.data
+		/*data = {
+			"code": 0,
+			"message": "操作成功",
+			"data": {
+			"course": {
+				"id": 5132,
+				"course_name": "习近平总书记的青年时期",
+				"course_no": "ln20240555",
+				"cover_image": "https://kczytest.lngbzx.gov.cn/course_image/ln20240555logo.png",
+				"online_date": "2024-07-26",
+				"lecturer": "毛赟美",
+				"lecturer_introduction": "中央团校党委委员、党群工作部部长",
+				"duration": 13,
+				"learning_hour": "0.50",
+				"completed_count": 79391,
+				"rating_score": "4.8",
+				"learning_progress": "0.00",
+				"is_completed": 0,
+				"is_test": 0,
+				"play_type": 4,
+				"courseware_url": "/course/ln20240555/sco1/1.mp4",
+				"keyword": "习近平总书记的青年时期",
+				"introduction": "",
+				"is_favorite": 0,
+				"rating_detail": "[{\"score\":\"4.8\",\"option\":\"1\"},{\"score\":\"4.8\",\"option\":\"2\"},{\"score\":\"4.8\",\"option\":\"3\"},{\"score\":\"4.8\",\"option\":\"4\"},{\"score\":\"4.8\",\"option\":\"5\"}]",
+				"is_rating": 0,
+				"manifest": "[{\"sco_id\":\"item01\",\"course_id\":\"5132\",\"sco_name\":\"1.习近平总书记的青年时期\",\"url\":\"https://kczytest.lngbzx.gov.cn/course/ln20240555/sco1/1.mp4\",\"url_fluent\":null,\"url_HD\":null,\"sn\":1,\"identifier\":\"item01\",\"identifierref\":\"res01\",\"children\":[]}]",
+				"is_file": null,
+				"user_course_id": 37322610,
+				"sco": "",
+				"lecturer_avatar": null,
+				"lecturer_details": null
+			}
+			}
+		}*/
+
+		user_course_id = data.data.course.user_course_id
+
+		let d = {"playCourse":"d1badf044b5c4c4a8c14537ccf14328b","user_course_id":14747131,"scormData":[{"sco_id":"res01","lesson_location":"30","session_time":30}]}
+		let dd = d.scormData[0]
+
+		d.playCourse = playCourse
+		d.user_course_id = user_course_id
+		dd.lesson_location = 60*60
+		dd.session_time = 60*60
+
+		/* 函数内周期刷课,刷完返回*/
+		async function shuakehandler(d) {
+
+			return new Promise(function(resolve, reject) {
+
+				async function inhandler(d) {
+					let tid = setTimeout(function() {
+						inhandler(d)
+					}, 5*60*1000)
+					// let _ajax = $axios.create({ headers: { Signature: 'adfasfsdaffsdafsdafaj' } })
+					let ret = await _ajax.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d)
+					ret = ret.data
+					if (ret.code != 0) {
+						console.error(`${course_name} 错误`, d)
+						reject(`${course_name} 错误`, d)
+						clearTimeout(tid)
+					} else {
+						if ('cheat' in ret.data) {
+							console.log(`${new Date().toLocaleTimeString()} %c${ret.data.learning_progress}%c ${course_name} ${ret.data.message}`,'color:red;font-weight: bold;','color:black')
+						} else {
+							if (ret.data.learning_progress >= 100 || ret.data.learning_progress == undefined) {
+								clearTimeout(tid)
+								console.log(`${new Date().toLocaleTimeString()} %c完成%c ${course_name}`,'color:red;font-weight: bold;','color:black')
+								resolve(`${new Date().toLocaleTimeString()} %c完成%c ${course_name}`,'color:red;font-weight: bold;','color:black')
+							}else{
+								console.log(`${new Date().toLocaleTimeString()} %c${ret.data.learning_progress}%c ${course_name} ${ret.message}`,'color:red;font-weight: bold;','color:black')
+							}
+						}
+					}
+				}
+
+				// start
+				inhandler(d)
+			})
+		}
+		await shuakehandler(d)
+		// ajax_data_list.push(d)
+		// m_ajaxs.push(_ajax.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d))
+	}
+	$swal.fire(`完成${courses.length}个课程`)
+	//let errhandler = (err)=>{alert("网络繁忙,或网址错误，请稍后刷新页面重试！");return false;}
+	//let ret = await $axios.all(m_ajaxs).catch(errhandler)
+	//console.log(ret)
+}

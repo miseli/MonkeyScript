@@ -9,6 +9,7 @@
 // @match        https://10.10.54.18/portal/config
 // @match        https://10.10.54.18/acs/app/events/inAndOutHistory
 // @match        http://10.10.10.20/*
+// @match        http://10.10.15.130/*
 // @match        https://www.baomi.org.cn/*
 // @match        http://10.10.10.10/appsystem/classify/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=15.32
@@ -499,7 +500,7 @@ async function updataScore(saveType='6'){
 	//formmain_4490['field0034'] = fieldInfo['field0034'].showValue2;
 
 	if(saveType*1=='1'|| true){
-		if(fieldInfo['field0037'].enums[0].enumValue == 0){
+		if(false && fieldInfo['field0037'].enums[0].enumValue == 0){
 			// 完成
 			formmain_4490['field0037'] = fieldInfo['field0037'].enums[0].id
 		}else{
@@ -535,6 +536,8 @@ async function updataScore(saveType='6'){
 		item.id = item.recordId
 		delete item.recordId
 
+        debugger
+
 		// 任务完成情况 = 当月随机日期+工作内容
         // 这里可能存在没有设置工作内容的情况
 		if(item['field0025']==undefined || item['field0025'].length<2){
@@ -549,6 +552,8 @@ async function updataScore(saveType='6'){
 		}else{
 			item['field0026'] = item['field0024']
 		}
+        // 子项得丰 = ''
+        // item['field0026'] = ''
 		总分 += item['field0026']*1
 	}
 
@@ -1131,6 +1136,249 @@ function 打分(){
 	})
 }
 
+function 自动流程() {
+	// 流程:
+	// load查询作业,得到每个作业的票据ID
+	// getInfoById根据票据ID获取作业信息
+	// getInfo根据票据ID获取被允许的操作按钮等信息
+
+	let ajax_ = $axios.create({
+		// headers:{
+		// authorization: localStorage.getItem("authorization"),
+		// 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+		// },
+		transformRequest: [function(data, headers) {
+			Object.assign(headers, {
+				authorization: localStorage.getItem("authorization"),
+				'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+			})
+			return data
+		}]
+	})
+
+	async function getBeanIds(filters) {
+		let {
+			data: rowdata
+		} = await ajax_.post('http://10.10.15.130/je/workflow/currentUserTask/getTask', $qs.stringify({
+			type: 'PI_PREAPPROV',
+			end: 0,
+			page: 1,
+			limit: 100,
+			totalCount: 0
+		}), {
+			headers: {
+				authorization: localStorage.getItem("authorization")
+			}
+		})
+		let rows = rowdata.data.data.rows
+		rows = rows.map(item => {
+			let {
+				pkValue: beanId,
+				funcCode,
+				tableCode,
+				title
+			} = item;
+			return {
+				beanId,
+				funcCode,
+				tableCode,
+				title
+			}
+		}).filter(item => {
+			let {
+				beanId,
+				title
+			} = item;
+			// return !beanId.includes('-') && title.includes(filters)
+            return title.includes(filters)
+		})
+		return rows
+	}
+
+	function getUser() {
+		let user = localStorage.getItem('userName'),
+			ret = ''
+		if (user == 20421 || user == '刘远鑫') {
+			ret = [{
+				"nodeId": "taskiroP6DpWEOXp7bbhv6q",
+				"nodeName": "安全总监",
+				"assignee": "b9d5b07dc64a46488880373ababaad19",
+				"assigneeName": "崔小峰"
+			}]
+		} else if (user == 4194 || user == '崔小峰' || user == '孔范洋' || user == 11540|| user == '乙烯管理员') {
+			ret = []
+		} else if(user == 27831 || user=='李忠华'){
+            ret = [{
+                "nodeId":"tasknyg472UuYQUvCjoJrLw",
+                "nodeName":"设备总监",
+                "assignee":"26fcd0b0e47448549ee05e998b206c38"
+                ,"assigneeName":"孔范洋"
+            }]
+        }
+		return JSON.stringify(ret)
+	}
+
+	async function 处理待办(action = '同意', filters = '报备') {
+		let rows = await getBeanIds(filters)
+
+		if (rows.length <= 0) {
+			alert('未搜索到作业信息')
+			return;
+		}
+
+		rows.forEach(async item => {
+			// 查询单个作业信息，根据搜索到的TICKET_APPLICATION_ID
+			// $axios.post('http://10.10.15.130/je/sp/ticket/application/getInfoById','tableCode=TICKET_APPLICATION&funcCode=TICKET_APPLICATION&pkValue='+beanId).then(res=>{})
+			/* ===============审批 开始 ========================================== */
+			let liucheng = true //liucheng变量控制何时结束整个循环
+			let {
+				beanId,
+				funcCode,
+				tableCode,
+				title
+			} = item
+
+			let funcId;
+			if (title.includes('补报')) {
+				funcId = 'SBmnFCYkttZ0WNtFqnk'
+			} else {
+				funcId = 'Es3xHzD7rK1r0f2NHm2'
+			}
+
+			while (liucheng) {
+				// 获取pdid/piid/taskId
+				let res1 = await ajax_.post('http://10.10.15.130/je/workflow/processInfo/getInfo', $qs.stringify({
+					funcCode,
+					tableCode,
+					beanId,
+					prod: 'security-platform-ticket'
+				}))
+
+				let {
+					buttonList
+				} = res1.data.data[0]
+				let btn;
+
+				if (buttonList.length <= 0) {
+					console.log('没有操作按钮\r\n不相关或已审批', item)
+					liucheng = false
+					break;
+				} else if (buttonList.length == 1) {
+					btn = buttonList[0]
+				} else if (buttonList.length > 1) {
+					if (action == '同意') {
+						btn = buttonList[0]
+					} else if (action == '拒绝') {
+						btn = buttonList[1]
+					}
+				}
+
+				const {
+					pdid,
+					piid,
+					taskId
+				} = btn
+
+				let target_ = await ajax_.post('http://10.10.15.130/je/workflow/processInfo/getSubmitOutGoingNode', $qs.stringify({
+					taskId,
+					pdid,
+					beanId,
+					tableCode,
+					prod: "security-platform-ticket"
+				}))
+				target_ = target_.data.data[0].target
+
+				let operatedata = {
+					pdid,
+					piid,
+					beanId,
+					taskId,
+					operationId: "",
+					tableCode,
+					funcCode,
+					funcId,
+					prod: "security-platform-ticket",
+				}
+
+				if (btn.code == 'receiveBtn') { //领取
+					operatedata.operationId = 'taskClaimOperation'
+					let {
+						data: resdata
+					} = await ajax_.post('http://10.10.15.130/je/workflow/button/operate', $qs.stringify(operatedata))
+					console.log('领取', item, resdata)
+				} else if (btn.code == 'submitBtn') { //同意
+					operatedata.operationId = 'taskSubmitOperation'
+					operatedata = Object.assign(operatedata, {
+						"comment": "同意",
+						"target": target_, // "lineLnoThYUMG0sPyWAcuMX",
+						"isJump": 0,
+						"assignee": [],
+						"sequentials": []
+					})
+
+					// 只有补报才需要判断用户,并决定下一流程
+					if (title.includes('补报')) {
+						operatedata.assignee = getUser()
+					}
+
+					let {
+						data: resdata
+					} = await ajax_.post('http://10.10.15.130/je/workflow/button/operate', $qs.stringify(operatedata))
+					console.log('同意', item, resdata)
+					liucheng = false
+					break
+				} else if (btn.code == 'dismissBtn') { //拒绝
+					operatedata.operationId = 'taskSubmitOperation'
+					operatedata = Object.assign(operatedata, {
+						"comment": "不同意",
+						"target": "lineEVjFObyruftzUAIpEHi",
+						"isJump": 0,
+						"assignee": [],
+						"sequentials": []
+					})
+				} else {
+					alert('出现未知按钮')
+					console.log('出现未知按钮', item)
+					liucheng = false
+					break;
+				}
+
+				// 发送操作,如领取,同意,拒绝
+				// let {data: resdata} = await ajax_.post('http://10.10.15.130/je/workflow/button/operate',$qs.stringify(operatedata))
+				// console.log(item, resdata)
+			}
+			/* ===============审批 开始 ========================================== */
+		})
+	}
+
+    (function(){
+        let btn = document.createElement('button')
+        btn.id = 'btn1'
+        document.body.appendChild(btn)
+        btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; top: 260px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
+        btn.innerText = '报备确认'
+        btn.addEventListener('click', e=>{
+            处理待办('同意','报备')
+        })
+    })();
+
+    (function(){
+        let btn = document.createElement('button')
+        btn.id = 'btn2'
+        document.body.appendChild(btn)
+        btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; top: 220px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
+        btn.innerText = '补报确认'
+        btn.addEventListener('click', e=>{
+            处理待办('同意','补报')
+        })
+    })()
+
+	// 遍历当前页作业项目的rowid,即:beanId
+	// $$('#app > div.je-panel.je-admin-layout-main > div > div.je-panel-wrapper > div.je-panel-item.je-panel-item-region-default > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div.je-panel-wrapper > div > div > div > div > div.je-panel-item.je-panel-item-region-default > div > div.vxe-table--render-wrapper > div.vxe-table--main-wrapper > div.vxe-table--body-wrapper.body--wrapper').find('tr[rowid]').each((id,item)=>{
+	// console.log($$(item).attr('rowid'))
+	// })
+}
+
 function 保密刷课(){
 	let btn = document.createElement('button')
 	btn.id = 'btn1'
@@ -1178,7 +1426,7 @@ function 导出考核表(){
 
 	document.body.appendChild(btn)
 
-	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 80px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
+	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 120px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
 	btn.innerText = '导出'
 	btn.addEventListener('click', 导出责任制考核表)
 }
@@ -1272,7 +1520,7 @@ if(/10\.10\.54\.18/.test(location.href)){
 	// 批量修改()
 }
 else if (/10\.10\.15\.32/.test(location.href)) {
-	一键确认()
+	// 一键确认()
 
 }else if(/10.10.10.20\/seeyon\/common\/cap4\/template\/display\/pc\/form\/dist\/index.htm/.test(location.href)){
 	// 批量复制()
@@ -1280,11 +1528,13 @@ else if (/10\.10\.15\.32/.test(location.href)) {
 	//登录OA()
 	//批量修改密码()
 	//打分()
-    导出考核表()
+    // 导出考核表()
 }else if(/10.10.10.10\/appsystem\/classify\/*/.test(location.href)){
 	筛选制度()
 }else if(/www.baomi.org.cn/.test(location.href)){
 	保密刷课()
+}else if(/10.10.15.130/.test(location.href)){
+    自动流程()
 }
 
 

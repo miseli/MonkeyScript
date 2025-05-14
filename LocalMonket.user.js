@@ -1,16 +1,9 @@
-/*
-* @Author: Cube
-* @Date:   2024-09-09 07:51:15
-* @Last Modified by:   Cube
-* @Last Modified time: 2024-11-04 11:09:22
-*/
-
 /* eslint-disable no-undef */
 /* eslint-disable no-eval */
 // ==UserScript==
 // @name         LocalMonket
 // @namespace    http://tampermonkey.net/
-// @version      1.5.6.2024.11.04
+// @version      1.5.6.2025.05.13
 // @description  relayout pages on browsing webpages
 // @author       Cube
 // @match        *://*/*
@@ -78,6 +71,7 @@ for(let item of d){
 }
 
 let c = 'cookiestxtpwd=224a08b570d10b63; cookiestxtuser=wyj; ASPSESSIONIDACRDSTBA=BMHJFNOBPPPAIMNPGMBJHBBL; usrid=39; cookiesname=%CD%F5%D1%E5%BE%FC; logoid=587270'.replaceAll(/ +/g,'')
+let d = c.split(';')
 for(let item of d){
 	console.log(item)
 	$cookies.set.apply(window, item.split('='))
@@ -89,18 +83,18 @@ framedocument = document.getElementById('mainFrame1').contentDocument || $("#mai
 
 // 全民K歌曲
 // $ajax.get('https://node.kg.qq.com/cgi/fcgi-bin/kg_ugc_get_homepage',{
-// 	params:{
-// 		jsonpCallback: 'cube',
-// 		type:'get_uinfo',
-// 		start: 1,
-// 		num: 15,
-// 		share_uid: '6a959f842424338b'
-// 	}
+//     params:{
+//         jsonpCallback: 'cube',
+//         type:'get_uinfo',
+//         start: 1,
+//         num: 15,
+//         share_uid: '6a959f842424338b'
+//     }
 // }).then(function(res){
-// 	let cube = function(data){
-// 		console.log(data.data.ugclist)
-// 	}
-// 	eval(res.data)
+//     let cube = function(data){
+//         console.log(data.data.ugclist)
+//     }
+//     eval(res.data)
 // })
 
 // hex转string
@@ -110,11 +104,11 @@ framedocument = document.getElementById('mainFrame1').contentDocument || $("#mai
 // 浏览器标签页显示与隐藏事件 visibilitychange
 // 网页关闭先执行onbeforeunload,再执行window.onunload
 // window.document.addEventListener('visibilitychange', function() {
-// 	if (window.document.visibilityState === 'visible') {
-// 		console.log('我回来了',this, new Date().toLocaleTimeString(), {begintime, randomTime})
-// 	} else if (window.document.visibilityState === 'hidden') {
-// 		console.log('我离开一会',this, new Date().toLocaleTimeString(), {begintime, randomTime})
-// 	}
+//     if (window.document.visibilityState === 'visible') {
+//         console.log('我回来了',this, new Date().toLocaleTimeString(), {begintime, randomTime})
+//     } else if (window.document.visibilityState === 'hidden') {
+//         console.log('我离开一会',this, new Date().toLocaleTimeString(), {begintime, randomTime})
+//     }
 // });
 
 /******************************* Common Start ********************************/
@@ -156,21 +150,29 @@ function asyncLoadScript(url){
 //   'https://cdnjs.cloudflare.com/ajax/libs/pinyin-pro/3.26.0/index.min.js',
 // ]
 
-function addScript(func_text){
+function add_style(style_text){
+	let s = unsafeWindow.document.createElement('style')
+	s.type = 'text/css'
+	s.textContent = style_text
+	unsafeWindow.document.body.appendChild(s)
+	console.log(s)
+}
+
+function add_script(script_text){
 	let s = unsafeWindow.document.createElement('script')
-	s.text = func_text
+	s.text = script_text
 	unsafeWindow.document.body.appendChild(s)
 	console.log(s)
 }
 
 function AddScript(src) {
-  var s = $$('<script>').attr("src", src)
-  $$("head").append(s[0])
+	var s = $$('<script>').attr("src", src)
+	$$("head").append(s[0])
 }
 
 function AddCss(src) {
-  var s = $$('<link>').attr({ href: src, rel: "stylesheet" })
-  $$("head").append(s[0])
+	var s = $$('<link>').attr({ href: src, rel: "stylesheet" })
+	$$("head").append(s[0])
 }
 
 /* 创建一个按钮 */
@@ -430,50 +432,60 @@ function 自动刷新进出记录(){
 	btn.style = `color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 30px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `
 	btn.innerText = '自动更新'
 	btn.addEventListener('click',function () {
-        alert('开始检查')
-        let doClick = ()=>{
-            $$('#app > div > div.h-page-content > div.h-page-search.row-amount-4 > form > div.h-page-search__action > button.el-button.el-button--primary').trigger('click')
-        }
-        let beginDate = new Date(),
-            endDate = new Date()
-        beginDate.setHours(8,0,0,0)
-        beginDate = beginDate.toISOString().replace(/Z$/,'+08:00')
-        endDate.setHours(31,59,59,999)
-        endDate = endDate.toISOString().replace(/Z$/,'+08:00')
-        let postdata = {
-            "organization": "8a4903423be1411c90b2b316c29a6dd1",
-            "isPic": 2,
-            "pageSize": 100,
-            "pageNo": 1,
-            "subOrg": 1,
-            "pageType": "1",
-            "isEncrypt": 1,
-            // "beginDate": "2024-09-17T00:00:00.000+08:00",
-            // "endDate": "2024-09-17T23:59:59.999+08:00",
-            beginDate,
-            endDate,
-            "extendPropertys": "{}"
-        }
-        let pre = ''
-        let t_ = setInterval(async function() {
-            let r = await $axios.post('https://10.10.54.18/acs/ui/v1/accessEventQuery/searchEventLog', postdata).then(res => {
-                let tmp_personId = res.data.data.rows[0].personId,
-                    ret = false
-                if (pre == '') {
-                    pre = tmp_personId
-                } else {
-                    if (pre != tmp_personId) {
-                        pre = tmp_personId
-                        ret = true
-                    }
-                    return ret;
-                }
-            })
-            if(r){
-                doClick()
-            }
-        }, 20000)
-    })
+		new $swal('开始检查')
+		let doClick = ()=>{
+			console.warn('刷新')
+			$$('#app > div > div.h-page-content > div.h-page-search.row-amount-4 > form > div.h-page-search__action > button.el-button.el-button--primary, #app > div > div.h-page-content > div.h-page-search.row-amount-6 > form > div.h-page-search__action > button.el-button.el-button--primary').trigger('click')
+		}
+		let tid = 0, pre = ''
+		const handler = async function() {
+
+			let beginDate = new Date(),
+				endDate = new Date()
+			beginDate.setHours(8,0,0,0)
+			beginDate = beginDate.toISOString().replace(/Z$/,'+08:00')
+			endDate.setHours(31,59,59,999)
+			endDate = endDate.toISOString().replace(/Z$/,'+08:00')
+			let postdata = {
+				// "organization": "8a4903423be1411c90b2b316c29a6dd1",
+				"doorRegionIndexCode": "e1429a6716b5452fa73066a27eac0b52",
+				"isPic": 2,
+				"pageSize": 100,
+				"pageNo": 1,
+				"subOrg": 1,
+				"pageType": "1",
+				"isEncrypt": 1,
+				// "beginDate": "2024-09-17T00:00:00.000+08:00",
+				// "endDate": "2024-09-17T23:59:59.999+08:00",
+				beginDate,
+				endDate,
+				"extendPropertys": "{}"
+			}
+
+			let r = await $axios.post('https://10.10.54.18/acs/ui/v1/accessEventQuery/searchEventLog', postdata).then(res => {
+				let tmp_personId = res.data.data.rows[0].personId,
+					ret = false
+				console.log(res.data.data.rows)
+				let {personName, personId} = res.data.data.rows[0]
+				console.warn({personName, personId, pre})
+				if (pre == '') {
+					pre = tmp_personId
+				} else {
+					if (pre != tmp_personId) {
+						pre = tmp_personId
+						ret = true
+					}
+				}
+				return ret;
+			})
+			if(r){
+				doClick()
+			}
+			clearInterval(tid)
+			tid = setInterval(handler, 30000)
+		}
+		handler()
+	})
 }
 
 (function() {
@@ -501,17 +513,18 @@ function 自动刷新进出记录(){
 		console.log('日志',location.href)
 		//jq.css不支持添加important样式,要么用jq.attr,要么用原生.
 		// if(location.host != 'github1s.com'&&location.host != '192.168.1.102:8080'&&location.host != 'winmicr-3ne6125:8080'){
-		// 	$$("body")[0].style.setProperty("background","#CCE8CC","important")
-		// 	$$("body")[0].style.setProperty("background-color","#CCE8CC","important")
+		//     $$("body")[0].style.setProperty("background","#CCE8CC","important")
+		//     $$("body")[0].style.setProperty("background-color","#CCE8CC","important")
 		// }
-		// 辽宁干部在线学习网(新版),进入开始学习中单独刷
-		if(/zyjstest\.lngbzx\.gov\.cn.+video_detail/.test(location.href)){
+		// 辽宁干部在线学习网(新版),进入开始学习中单独刷 2025年更新
+		if(/zyjs\.lngbzx\.gov\.cn.+video_detail/.test(location.href)){
 			// return
 			let nbtn = $$(`<button>刷单课</button>`)
 			$$('body').append(nbtn)
 			nbtn.attr('style',`color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 80px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `)
-			nbtn.click(async function(){
-				let d = {"playCourse":"d1badf044b5c4c4a8c14537ccf14328b","user_course_id":14747131,"scormData":[{"sco_id":"res03","lesson_location":"30","session_time":30}]}
+			let getcourseinfo = async function(){
+				/* 进入视频页获取课程信息 */
+				let d = {"playCourse":"d1badf044b5c4c4a8c14537ccf14328b","user_course_id":14747131,"scormData":[{"sco_id":"res01","lesson_location":"30","session_time":30}]}
 				let dd = d.scormData[0]
 
 				let el = $$('div.bodys.is_cont')[0].__vue__
@@ -521,18 +534,50 @@ function 自动刷新进出记录(){
 				d.user_course_id = user_course_id
 				dd.lesson_location = 60*60
 				dd.session_time = 60*60
-				let ret = await $axios.post('https://zyjstest.lngbzx.gov.cn/trainee/index/user_course', d, {headers:{Signature:'adfasfsdaffsdafsdafaj'}})
-				ret = ret.data
-				if(ret.code!=0){
-					alert('错误')
-				}else{
-					alert(ret.message)
-				}
-				console.log(ret)
-			})
+				return [d];
+			}
+
+
+			/* 函数内周期刷课,刷完返回*/
+			let shuakehandler = async function() {
+				let d = await getcourseinfo()
+				d = d[0]
+				return new Promise(async function(resolve, reject) {
+					async function inhandler(d) {
+						let tid = setTimeout(function() {
+							inhandler(d)
+						}, 16000)
+						let _axios = $axios.create({ headers: { Signature: 'adfasfsdaffsdafsdafaj' } })
+						let ret = await _axios.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d)
+						ret = ret.data
+						if (ret.code != 0) {
+							console.log('错误', d)
+							reject('错误', d)
+							clearTimeout(tid)
+						} else {
+							if ('cheat' in ret.data) {
+								//alert(ret.data.message)
+								console.log(ret.data.message, ret.data.learning_progress, new Date().toLocaleTimeString())
+							} else {
+								//alert(ret.message)
+								console.log(ret.message, ret.data.learning_progress, new Date().toLocaleTimeString())
+								if (ret.data.learning_progress >= 100 || ret.data.learning_progress == undefined) {
+									console.log('完成', d)
+									resolve('完成', d)
+									clearTimeout(tid)
+									return true
+								}
+							}
+						}
+					}
+					inhandler(d)
+				})
+			}
+
+			nbtn.click(shuakehandler)
 		}
 		// 辽宁干部在线学习网(新版),在未完成列表中批量刷
-		if(/zyjstest\.lngbzx\.gov\.cn.+study_center\/my_course/.test(location.href)){
+		if(/zyjs\.lngbzx\.gov\.cn.+study_center\/my_course/.test(location.href)){
 			let nbtn = $$(`<button>跳过开始画面</button>`)
 			$$('body').append(nbtn)
 			nbtn.attr('style',`color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 30px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `)
@@ -544,9 +589,9 @@ function 自动刷新进出记录(){
 			$$('body').append(nbtn)
 			nbtn.attr('style',`color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 80px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `)
 			nbtn.click(async function(){
-                await 批量刷()
-            })
-        }
+				await 批量刷()
+			})
+		}
 		//获取行政公文
 		if(/10.10.10.20\/seeyon\/govdoc\/list.do/.test(location.href)){
 			unsafeWindow['行政公文'] = function(){
@@ -650,13 +695,13 @@ function 自动刷新进出记录(){
 		}
 		// OA平台
 		if(/\d+\.\d+\.\d+\.\d+.+\/seeyon\/main.do\?method=main/.test(location.href)){
-            console.log('OA平台')
-            setTimeout(()=>{
-                return
-                $$('.lev1Li:contains("责任")').hide()
-                $$('.lev1Li:contains("HR")').hide()
-            },500)
-            let 跳过改密码 = function(){
+			console.log('OA平台')
+			setTimeout(()=>{
+				return
+				$$('.lev1Li:contains("责任")').hide()
+				$$('.lev1Li:contains("HR")').hide()
+			},500)
+			let 跳过改密码 = function(){
 				let btn = $(`
 					<div id="cube" style="
 						width: 350px;
@@ -1147,41 +1192,41 @@ function 自动刷新进出记录(){
 		// 吾爱破解样式修改,签到不跳转
 		if(/www.52pojie.cn/.test(location.href)){
 			console.log('吾爱破解样式修改')
-            let onloadfun = debounce(function (){
-                    var iframeDocument = document.getElementById('myiframe').contentDocument || document.getElementById('myiframe').contentWindow.document;
-                    // 确保iframe内容完全加载完成
-                    if (iframeDocument.readyState === 'complete') {
-                        // 执行你需要的操作
-                        console.log('Iframe content is loaded and JavaScript has executed.');
-                        alert('iframe全部加载完毕')
-                    }
-                },5000)
-            // 自动签到1
-            let autoqiandao1 = function(){
-                let f = $$('<iframe id="myiframe" hidden src="https://www.52pojie.cn/home.php?mod=task&do=apply&id=2&referer=%2Fforum.php%3Fmod%3Dguide%26view%3Dhot">')
-                f[0].onload = onloadfun
-                f.appendTo('body')
-            }
+			let onloadfun = debounce(function (){
+					var iframeDocument = document.getElementById('myiframe').contentDocument || document.getElementById('myiframe').contentWindow.document;
+					// 确保iframe内容完全加载完成
+					if (iframeDocument.readyState === 'complete') {
+						// 执行你需要的操作
+						console.log('Iframe content is loaded and JavaScript has executed.');
+						alert('iframe全部加载完毕')
+					}
+				},5000)
+			// 自动签到1
+			let autoqiandao1 = function(){
+				let f = $$('<iframe id="myiframe" hidden src="https://www.52pojie.cn/home.php?mod=task&do=apply&id=2&referer=%2Fforum.php%3Fmod%3Dguide%26view%3Dhot">')
+				f[0].onload = onloadfun
+				f.appendTo('body')
+			}
 
-            // 自动签到2 失效
-            let autoqiandao2 = function(){
-                $ajax.get('https://www.52pojie.cn/home.php?mod=task&do=apply&id=2').then(res=>{
-                    if(res.status==200){
-                        let text = res.data
-                        if(/请开启JavaScript并刷新该页/.test(text)){
-                            let cb = GM_openInTab('https://www.52pojie.cn/home.php?mod=task&do=apply&id=2', {active: false,insert:true})
-                            cb.onclose = ()=>{
-                                this.innerText = "已经签到"
-                                $$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
-                            }
-                            setTimeout(()=>{cb.close()}, 3000)
-                        }else{
-                            this.innerText = "已经签到"
-                            $$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
-                        }
-                    }
-                })
-            }
+			// 自动签到2 失效
+			let autoqiandao2 = function(){
+				$ajax.get('https://www.52pojie.cn/home.php?mod=task&do=apply&id=2').then(res=>{
+					if(res.status==200){
+						let text = res.data
+						if(/请开启JavaScript并刷新该页/.test(text)){
+							let cb = GM_openInTab('https://www.52pojie.cn/home.php?mod=task&do=apply&id=2', {active: false,insert:true})
+							cb.onclose = ()=>{
+								this.innerText = "已经签到"
+								$$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
+							}
+							setTimeout(()=>{cb.close()}, 3000)
+						}else{
+							this.innerText = "已经签到"
+							$$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
+						}
+					}
+				})
+			}
 
 			// 加载下一页
 			let loadd_nextpage = function(nextpage_url){
@@ -1200,9 +1245,9 @@ function 自动刷新进出记录(){
 				let state = !($$(this).attr('src')=='https://static.52pojie.cn/static/image/common/qds.png')
 				// console.log(state,this)
 				if(!state){
-                    autoqiandao1()
-                    this.innerText = "已经签到"
-                    $$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
+					autoqiandao1()
+					this.innerText = "已经签到"
+					$$(this).attr('src','https://static.52pojie.cn/static/image/common/wbs.png')
 				}else{
 					alert('已经签到')
 				}
@@ -1210,7 +1255,7 @@ function 自动刷新进出记录(){
 			// return;
 			// 美化,增加折叠框
 			// $$("#separatorline").prevAll("tbody").each((i,item)=>{
-			// 	try{toggle_collapse(item.id)}catch(e){}
+			//     try{toggle_collapse(item.id)}catch(e){}
 			// })
 
 			$$("[id^=stickthread]").toggle()
@@ -1469,23 +1514,35 @@ function 自动刷新进出记录(){
 			.appendTo(document.body)
 
 		}
-        // 集团门禁系统
-        if(/https:\/\/10.10.54.18\/acs\/app\/events\/inAndOutHistory/.test(location.href)){
-            console.log('门禁系统自动刷新进出记录', 'https://10.10.54.18/acs/app/events/inAndOutHistory')
-            自动刷新进出记录()
-        }
-        //注册安全工程师,修改准考证和成绩
-        if(/https:\/\/zg.cpta.com.cn\/examfront\/admission\/lookzkzForLogin.htm/.test(location.href)||
-           /https:\/\/zg.cpta.com.cn\/examfront\/score\/query_new.htm/.test(location.href)
-          ){
-            let t1 = setInterval(function(){
-                $$("#form > div > div > div > div.ibox.float-e-margins > div > table > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(3) > td > table > tbody > tr:nth-child(2) > td > table").html(`<tbody><tr><td style="width:318px"><div align="center">考试科目</div></td><td style="width:126px"><div align="center">准考证号</div></td><td width="201px"><div align="center">考试时间</div></td><td width="50px"><div align="center">考场</div></td><td style="width:55px;"><div align="center">座位号</div></td></tr><tr><td><div align="center">安全生产法律法规</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-26 09:00-11:30</div></td><td><div align="center">020</div></td><td><div align="center">16</div></td></tr><tr><td><div align="center">安全生产管理</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-26 14:00-16:30</div></td><td><div align="center">046</div></td><td><div align="center">30</div></td></tr><tr><td><div align="center">安全生产技术基础</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-27 09:00-11:30</div></td><td><div align="center">035</div></td><td><div align="center">13</div></td></tr><tr><td><div align="center">安全生产专业实务（化工安全）</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-27 14:00-16:30</div></td><td><div align="center">051</div></td><td><div align="center">09</div></td></tr></tbody>`)
-                if(/2023/.test($$('body > div > div > div > div > div.ibox-content > div:nth-child(1)').text())){
-                    $$('body > div > div > div > div > div.ibox-content > table').html(`<tbody><tr><th colspan="4" style="text-align: center;background: aliceblue">考 生 信 息</th></tr><tr><td>姓  名：</td><td><span class="spz_class">刘远鑫</span></td><td>证件号码：</td><td>210682198909304237</td></tr><tr><td>报名省市：</td><td>辽宁省</td><td>报名地市：</td><td>辽宁省盘锦市</td></tr><tr><th colspan="3" width="65%" style="text-align: center;background: aliceblue">科 目 名 称</th><th style="text-align: center;background: aliceblue">成 绩</th></tr><tr><td colspan="3" style="text-align: center;">安全生产法律法规</td><td style="text-align: center;">51</td></tr><tr><td colspan="3" style="text-align: center;">安全生产管理</td><td style="text-align: center;">49</td></tr><tr><td colspan="3" style="text-align: center;">安全生产技术基础</td><td style="text-align: center;">55</td></tr><tr><td colspan="3" style="text-align: center;">安全生产专业实务（化工安全）</td><td style="text-align: center;">53</td></tr></tbody>`)
-                }
-                console.log(t1)
-            },500)
-        }
+		// 集团门禁系统
+		if(/https:\/\/10.10.54.18\/acs\/app\/events\/inAndOutHistory/.test(location.href)){
+			console.log('门禁系统自动刷新进出记录', 'https://10.10.54.18/acs/app/events/inAndOutHistory')
+			自动刷新进出记录()
+		}
+		//注册安全工程师,修改准考证和成绩
+		if(/https:\/\/zg.cpta.com.cn\/examfront\/admission\/lookzkzForLogin.htm/.test(location.href)||
+			 /https:\/\/zg.cpta.com.cn\/examfront\/score\/query_new.htm/.test(location.href)
+			){
+			let fun1 = async function(){
+				let {data} = await $axios.get('https://zg.cpta.com.cn/examfront/menu/bar.htm?myrandom=')
+				let person = data.includes('刘远鑫')
+				$$("#form > div > div > div > div.ibox.float-e-margins > div > table > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(3) > td > table > tbody > tr:nth-child(2) > td > table").html(`<tbody><tr><td style="width:318px"><div align="center">考试科目</div></td><td style="width:126px"><div align="center">准考证号</div></td><td width="201px"><div align="center">考试时间</div></td><td width="50px"><div align="center">考场</div></td><td style="width:55px;"><div align="center">座位号</div></td></tr><tr><td><div align="center">安全生产法律法规</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-26 09:00-11:30</div></td><td><div align="center">020</div></td><td><div align="center">16</div></td></tr><tr><td><div align="center">安全生产管理</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-26 14:00-16:30</div></td><td><div align="center">046</div></td><td><div align="center">30</div></td></tr><tr><td><div align="center">安全生产技术基础</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-27 09:00-11:30</div></td><td><div align="center">035</div></td><td><div align="center">13</div></td></tr><tr><td><div align="center">安全生产专业实务（化工安全）</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-27 14:00-16:30</div></td><td><div align="center">051</div></td><td><div align="center">09</div></td></tr></tbody>`)
+				if(person && /2023/.test($$('body > div > div > div > div > div.ibox-content > div:nth-child(1)').text())){
+					$$('body > div > div > div > div > div.ibox-content > table').html(`<tbody><tr><th colspan="4" style="text-align: center;background: aliceblue">考 生 信 息</th></tr><tr><td>姓  名：</td><td><span class="spz_class">刘远鑫</span></td><td>证件号码：</td><td>210682198909304237</td></tr><tr><td>报名省市：</td><td>辽宁省</td><td>报名地市：</td><td>辽宁省盘锦市</td></tr><tr><th colspan="3" width="65%" style="text-align: center;background: aliceblue">科 目 名 称</th><th style="text-align: center;background: aliceblue">成 绩</th></tr><tr><td colspan="3" style="text-align: center;">安全生产法律法规</td><td style="text-align: center;">51</td></tr><tr><td colspan="3" style="text-align: center;">安全生产管理</td><td style="text-align: center;">32</td></tr><tr><td colspan="3" style="text-align: center;">安全生产技术基础</td><td style="text-align: center;">36</td></tr><tr><td colspan="3" style="text-align: center;">安全生产专业实务（化工安全）</td><td style="text-align: center;">41</td></tr></tbody>`)
+				}
+				else if(person && /2024/.test($$('body > div > div > div > div > div.ibox-content > div:nth-child(1)').text())){
+					$$('body > div > div > div > div > div.ibox-content > table').html(`<tbody><tr><th colspan="4" style="text-align: center;background: aliceblue">考 生 信 息</th></tr><tr><td>姓  名：</td><td><span class="spz_class">刘1远鑫</span></td><td>证件号码：</td><td>210682198909304237</td></tr><tr><td>报名省市：</td><td>辽宁省</td><td>报名地市：</td><td>辽宁省盘锦市</td></tr><tr><th colspan="3" width="65%" style="text-align: center;background: aliceblue">科 目 名 称</th><th style="text-align: center;background: aliceblue">成 绩</th></tr><tr><td colspan="3" style="text-align: center;">安全生产法律法规</td><td style="text-align: center;">49</td></tr><tr><td colspan="3" style="text-align: center;">安全生产管理</td><td style="text-align: center;">34</td></tr><tr><td colspan="3" style="text-align: center;">安全生产技术基础</td><td style="text-align: center;">31</td></tr><tr><td colspan="3" style="text-align: center;">安全生产专业实务（化工安全）</td><td style="text-align: center;">36</td></tr></tbody>`)
+				}
+			}
+			fun1();
+			let t1 = setInterval(fun1, 500)
+		}
+		if(/10.10.15.125/.test(location.href)){
+			console.log('定位系统,删除警告')
+			setInterval(()=>{
+				$$('.warning-overlay').remove()
+			},1000)
+		}
 		// 快看66 视频播放 父页面
 		if(/kuaikan\d+.com/.test(location.host) ||/zhuijuku.com/.test(location.host)|| /kk6080.cn/.test(location.host)){
 			console.log('快看66 视频播放 父页面')
@@ -1605,83 +1662,129 @@ function hehe(res){
 })()
 */
 
+/* 2025年更新 */
 async function 批量刷(){
-  // 获取课程列表
-  let courses = $$('.is_cont > div').last()[0].__vue__.course_list.courses
-  let m_ajaxs = []
-  for(let {id,is_completed,course_name} of courses){
-    // console.log({id,is_completed,course_name})
-    if(is_completed)continue;
-    let ret, data;
-    let playCourse, user_course_id, lesson_location, session_time;
-    let _axios = $axios.create({headers:{Signature:'adfasfsdaffsdafsdafaj'}})
 
-    // 获取playCourse
-    ret = await _axios.get(`https://zyjstest.lngbzx.gov.cn/trainee/api/course/play/${id}`)
-    data = ret.data
-    /*data = {
-      "code": 0,
-      "message": "操作成功",
-      "data": {
-        "playCourse": "04829a88cc284e3a907aa1be0f675764"
-      }
-    }*/
+	let _axios = $axios.create({headers:{Signature:'adfasfsdaffsdafsdafaj'}})
 
-    playCourse = data.data.playCourse
+	// 获取课程列表
+	let sss = await _axios.post('https://zyjs.lngbzx.gov.cn/trainee/api/course/uncompleted?currentPage=1&pageSize=50&year=2025',{})
+	// let courses = $$('.is_cont > div').last()[0].__vue__.course_list.courses
+	courses = sss.data.data.courses
+	console.info('所有课程:', courses)
+	alert(`共计${courses.length}个课程\r\n开始学习`)
+	let m_ajaxs = [], ajax_data_list = []
+	for(let {id,is_completed,course_name} of courses){
+		// console.log({id,is_completed,course_name})
+		if(is_completed){
+			continue
+		}
+		let ret, data;
+		let playCourse, user_course_id, lesson_location, session_time;
 
-    // 获取课程信息
-    ret = await _axios.get(`https://zyjstest.lngbzx.gov.cn/trainee/api/course/detail/${id}`)
-    data = ret.data
-    /*data = {
-      "code": 0,
-      "message": "操作成功",
-      "data": {
-        "course": {
-          "id": 5132,
-          "course_name": "习近平总书记的青年时期",
-          "course_no": "ln20240555",
-          "cover_image": "https://kczytest.lngbzx.gov.cn/course_image/ln20240555logo.png",
-          "online_date": "2024-07-26",
-          "lecturer": "毛赟美",
-          "lecturer_introduction": "中央团校党委委员、党群工作部部长",
-          "duration": 13,
-          "learning_hour": "0.50",
-          "completed_count": 79391,
-          "rating_score": "4.8",
-          "learning_progress": "0.00",
-          "is_completed": 0,
-          "is_test": 0,
-          "play_type": 4,
-          "courseware_url": "/course/ln20240555/sco1/1.mp4",
-          "keyword": "习近平总书记的青年时期",
-          "introduction": "",
-          "is_favorite": 0,
-          "rating_detail": "[{\"score\":\"4.8\",\"option\":\"1\"},{\"score\":\"4.8\",\"option\":\"2\"},{\"score\":\"4.8\",\"option\":\"3\"},{\"score\":\"4.8\",\"option\":\"4\"},{\"score\":\"4.8\",\"option\":\"5\"}]",
-          "is_rating": 0,
-          "manifest": "[{\"sco_id\":\"item01\",\"course_id\":\"5132\",\"sco_name\":\"1.习近平总书记的青年时期\",\"url\":\"https://kczytest.lngbzx.gov.cn/course/ln20240555/sco1/1.mp4\",\"url_fluent\":null,\"url_HD\":null,\"sn\":1,\"identifier\":\"item01\",\"identifierref\":\"res01\",\"children\":[]}]",
-          "is_file": null,
-          "user_course_id": 37322610,
-          "sco": "",
-          "lecturer_avatar": null,
-          "lecturer_details": null
-        }
-      }
-    }*/
+		// 获取playCourse
+		ret = await _axios.get(`https://zyjs.lngbzx.gov.cn/trainee/api/course/play/${id}`)
+		data = ret.data
+		/*data = {
+			"code": 0,
+			"message": "操作成功",
+			"data": {
+			"playCourse": "04829a88cc284e3a907aa1be0f675764"
+			}
+		}*/
 
-    user_course_id = data.data.course.user_course_id
+		playCourse = data.data.playCourse
 
-    let d = {"playCourse":"d1badf044b5c4c4a8c14537ccf14328b","user_course_id":14747131,"scormData":[{"sco_id":"res03","lesson_location":"30","session_time":30}]}
-    let dd = d.scormData[0]
+		// 获取课程信息
+		ret = await _axios.get(`https://zyjs.lngbzx.gov.cn/trainee/api/course/detail/${id}`)
+		data = ret.data
+		/*data = {
+			"code": 0,
+			"message": "操作成功",
+			"data": {
+			"course": {
+				"id": 5132,
+				"course_name": "习近平总书记的青年时期",
+				"course_no": "ln20240555",
+				"cover_image": "https://kczytest.lngbzx.gov.cn/course_image/ln20240555logo.png",
+				"online_date": "2024-07-26",
+				"lecturer": "毛赟美",
+				"lecturer_introduction": "中央团校党委委员、党群工作部部长",
+				"duration": 13,
+				"learning_hour": "0.50",
+				"completed_count": 79391,
+				"rating_score": "4.8",
+				"learning_progress": "0.00",
+				"is_completed": 0,
+				"is_test": 0,
+				"play_type": 4,
+				"courseware_url": "/course/ln20240555/sco1/1.mp4",
+				"keyword": "习近平总书记的青年时期",
+				"introduction": "",
+				"is_favorite": 0,
+				"rating_detail": "[{\"score\":\"4.8\",\"option\":\"1\"},{\"score\":\"4.8\",\"option\":\"2\"},{\"score\":\"4.8\",\"option\":\"3\"},{\"score\":\"4.8\",\"option\":\"4\"},{\"score\":\"4.8\",\"option\":\"5\"}]",
+				"is_rating": 0,
+				"manifest": "[{\"sco_id\":\"item01\",\"course_id\":\"5132\",\"sco_name\":\"1.习近平总书记的青年时期\",\"url\":\"https://kczytest.lngbzx.gov.cn/course/ln20240555/sco1/1.mp4\",\"url_fluent\":null,\"url_HD\":null,\"sn\":1,\"identifier\":\"item01\",\"identifierref\":\"res01\",\"children\":[]}]",
+				"is_file": null,
+				"user_course_id": 37322610,
+				"sco": "",
+				"lecturer_avatar": null,
+				"lecturer_details": null
+			}
+			}
+		}*/
 
-    d.playCourse = playCourse
-    d.user_course_id = user_course_id
-    dd.lesson_location = 60*60
-    dd.session_time = 60*60
+		user_course_id = data.data.course.user_course_id
 
-    m_ajaxs.push(_axios.post('https://zyjstest.lngbzx.gov.cn/trainee/index/user_course', d))
-  }
-  let errhandler = (err)=>{alert("网络繁忙,或网址错误，请稍后刷新页面重试！");return false;}
-  let ret = await $axios.all(m_ajaxs).catch(errhandler)
-  console.log(ret)
-  debugger
+		let d = {"playCourse":"d1badf044b5c4c4a8c14537ccf14328b","user_course_id":14747131,"scormData":[{"sco_id":"res01","lesson_location":"30","session_time":30}]}
+		let dd = d.scormData[0]
+
+		d.playCourse = playCourse
+		d.user_course_id = user_course_id
+		dd.lesson_location = 60*60
+		dd.session_time = 60*60
+
+		/* 函数内周期刷课,刷完返回*/
+		async function shuakehandler(d) {
+
+			return new Promise(function(resolve, reject) {
+
+				async function inhandler(d) {
+					let tid = setTimeout(function() {
+						inhandler(d)
+					}, 5*60*1000)
+					let _axios = $axios.create({ headers: { Signature: 'adfasfsdaffsdafsdafaj' } })
+					let ret = await _axios.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d)
+					ret = ret.data
+					if (ret.code != 0) {
+						console.error(`${course_name} 错误`, d)
+						reject(`${course_name} 错误`, d)
+						clearTimeout(tid)
+					} else {
+						if ('cheat' in ret.data) {
+							console.log(`${new Date().toLocaleTimeString()} %c${ret.data.learning_progress}%c ${course_name} ${ret.data.message}`,'color:red;font-weight: bold;','color:black')
+						} else {
+							if (ret.data.learning_progress >= 100 || ret.data.learning_progress == undefined) {
+								clearTimeout(tid)
+								console.log(`${new Date().toLocaleTimeString()} %c完成%c ${course_name}`,'color:red;font-weight: bold;','color:black')
+								resolve(`${new Date().toLocaleTimeString()} %c完成%c ${course_name}`,'color:red;font-weight: bold;','color:black')
+							}else{
+								console.log(`${new Date().toLocaleTimeString()} %c${ret.data.learning_progress}%c ${course_name} ${ret.message}`,'color:red;font-weight: bold;','color:black')
+							}
+						}
+					}
+				}
+
+				// start
+				inhandler(d)
+			})
+		}
+		await shuakehandler(d)
+		// ajax_data_list.push(d)
+		// m_ajaxs.push(_axios.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d))
+	}
+	$swal.fire(`完成${courses.length}个课程`)
+	//let errhandler = (err)=>{alert("网络繁忙,或网址错误，请稍后刷新页面重试！");return false;}
+	//let ret = await $axios.all(m_ajaxs).catch(errhandler)
+	//console.log(ret)
 }

@@ -154,7 +154,7 @@ function add_style(style_text){
 	let s = unsafeWindow.document.createElement('style')
 	s.type = 'text/css'
 	s.textContent = style_text
-	unsafeWindow.document.body.appendChild(s)
+	unsafeWindow.document.head.appendChild(s)
 	console.log(s)
 }
 
@@ -578,18 +578,27 @@ function 自动刷新进出记录(){
 		}
 		// 辽宁干部在线学习网(新版),在未完成列表中批量刷
 		if(/zyjs\.lngbzx\.gov\.cn.+study_center\/my_course/.test(location.href)){
-			let nbtn = $$(`<button>跳过开始画面</button>`)
-			$$('body').append(nbtn)
-			nbtn.attr('style',`color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 30px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `)
-			nbtn.click(function(){
-				$$('body > div.el-message-box__wrapper,body > div.v-modal').remove()
-			})
+			let custom_btn_side = `
+			.custom_btn_side{
+				color: white;
+				background: #006158;
+				border-radius: 3px;
+				width: 76px;
+				height: 34px;
+				right: 0px;
+				bottom: 30px;
+				position: fixed;
+				z-index: 99999;
+				border: #cecfcf solid 1px;
+			}`
 
-			nbtn = $$(`<button>批量</button>`)
+			add_style(custom_btn_side)
+
+			let nbtn = $$(`<button type="button">批量</button>`)
 			$$('body').append(nbtn)
-			nbtn.attr('style',`color: white;background: #006158; border-radius: 3px; width: 76px; height: 34px; right: 0px; bottom: 80px; position: absolute; z-index: 99999; border: #cecfcf solid 1px; `)
-			nbtn.click(async function(){
-				await 批量刷()
+			nbtn.addClass('custom_btn_side')
+			nbtn.click(async function(e){
+				await 批量刷(e)
 			})
 		}
 		//获取行政公文
@@ -1663,18 +1672,68 @@ function hehe(res){
 */
 
 /* 2025年更新 */
-async function 批量刷(){
+async function 批量刷(e){
+	if(e.target?.running!=undefined){
+		$swal.fire(e.target.running)
+		return;
+	}
 
-	let _axios = $axios.create({headers:{Signature:'adfasfsdaffsdafsdafaj'}})
+	let _ajax = $axios.create({headers:{Signature:'adfasfsdaffsdafsdafaj'}})
+
+	// 定期发送心跳包,维持登录状态
+	let keepping = function(_ajax){
+		let t = new Date().toLocaleTimeString()
+		let tid_ = setInterval(async function(){
+			console.warn(`${new Date().toLocaleTimeString()} 心跳一次`)
+			let ret = _ajax.get('https://zyjs.lngbzx.gov.cn/trainee/api/login/keep_live')
+			ret = await _ajax.post('https://zyjs.lngbzx.gov.cn/trainee/login/status?userInfo=',{})
+			if(ret.data.data?.realname==undefined){
+				console.error(new Date().toLocaleTimeString())
+				clearInterval(tid)
+				alert(`${t} 挂机\r\n${new Date().toLocaleTimeString()} 掉线`)
+			}
+		},10*60*1000)
+	}
+	keepping(_ajax)
 
 	// 获取课程列表
-	let sss = await _axios.post('https://zyjs.lngbzx.gov.cn/trainee/api/course/uncompleted?currentPage=1&pageSize=50&year=2025',{})
+	let sss = await _ajax.post('https://zyjs.lngbzx.gov.cn/trainee/api/course/uncompleted?currentPage=1&pageSize=50&year=2025',{})
 	// let courses = $$('.is_cont > div').last()[0].__vue__.course_list.courses
 	courses = sss.data.data.courses
 	console.info('所有课程:', courses)
 	alert(`共计${courses.length}个课程\r\n开始学习`)
-	let m_ajaxs = [], ajax_data_list = []
-	for(let {id,is_completed,course_name} of courses){
+
+	// 遍历课程列表,逐个刷课
+	let m_ajaxs = [], ajax_data_list = [], progress_index = 0
+	for(let {id, is_completed, course_name} of courses){
+
+		//更新进度
+		$$(e.target).text(`进度${progress_index}/${courses.length}`)
+		$$(e.target).attr({title: course_name})
+
+		let lis = courses.map((item, index, _this)=>{
+			if(index<progress_index){
+				return `<li style="color:green;">${item.course_name}</li>`
+			}else if(index==progress_index){
+				return `<li style="font-weight: bold;">${item.course_name}</li>`
+			}else{
+				return `<li>${item.course_name}</li>`
+			}
+		})
+
+		e.target.running = {
+			title: `当前进度${progress_index}/${courses.length}`,
+			html: `
+				<div style="padding-left: 22px;">
+					<ol style="list-style-type: decimal;text-align: left;max-height: 400px;font-family: fangsong;">
+					${lis.join('')}
+					</ol>
+				</div>
+			`
+		}
+
+		progress_index++;
+
 		// console.log({id,is_completed,course_name})
 		if(is_completed){
 			continue
@@ -1683,7 +1742,7 @@ async function 批量刷(){
 		let playCourse, user_course_id, lesson_location, session_time;
 
 		// 获取playCourse
-		ret = await _axios.get(`https://zyjs.lngbzx.gov.cn/trainee/api/course/play/${id}`)
+		ret = await _ajax.get(`https://zyjs.lngbzx.gov.cn/trainee/api/course/play/${id}`)
 		data = ret.data
 		/*data = {
 			"code": 0,
@@ -1696,7 +1755,7 @@ async function 批量刷(){
 		playCourse = data.data.playCourse
 
 		// 获取课程信息
-		ret = await _axios.get(`https://zyjs.lngbzx.gov.cn/trainee/api/course/detail/${id}`)
+		ret = await _ajax.get(`https://zyjs.lngbzx.gov.cn/trainee/api/course/detail/${id}`)
 		data = ret.data
 		/*data = {
 			"code": 0,
@@ -1753,8 +1812,8 @@ async function 批量刷(){
 					let tid = setTimeout(function() {
 						inhandler(d)
 					}, 5*60*1000)
-					let _axios = $axios.create({ headers: { Signature: 'adfasfsdaffsdafsdafaj' } })
-					let ret = await _axios.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d)
+					// let _ajax = $axios.create({ headers: { Signature: 'adfasfsdaffsdafsdafaj' } })
+					let ret = await _ajax.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d)
 					ret = ret.data
 					if (ret.code != 0) {
 						console.error(`${course_name} 错误`, d)
@@ -1781,7 +1840,7 @@ async function 批量刷(){
 		}
 		await shuakehandler(d)
 		// ajax_data_list.push(d)
-		// m_ajaxs.push(_axios.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d))
+		// m_ajaxs.push(_ajax.post('https://zyjs.lngbzx.gov.cn/trainee/index/user_course', d))
 	}
 	$swal.fire(`完成${courses.length}个课程`)
 	//let errhandler = (err)=>{alert("网络繁忙,或网址错误，请稍后刷新页面重试！");return false;}

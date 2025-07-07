@@ -22,7 +22,7 @@
 // @exclude      *://localhost:8080/*
 // @license      MIT
 //// @require      file:///D:/Dist/main.js
-// @require      file:///G:/Users/Administrator/Desktop/personal/MonkeyToolCollection/dist/main.js
+// @require      file:///G:/Users/Administrator/Desktop/桌面/personal/MonkeyToolCollection/dist/main.js
 
 // @run-at       document-start
 // @grant        unsafeWindow
@@ -32,6 +32,7 @@
 
 // js的页面生命周期 https://www.jianshu.com/p/5674c4cd9f3a
 // 如果grant使用unsafeWindow,则window对象会被包装,使用unsafeWindow访问原生window.使用none则不然
+// @webRequest 已经弃用,>v5.3无法使用
 // @webRequest   {"selector":{"include":"*://*vue.min.js", "exclude": "*://purge.jsdelivr.net/*"},"action":{"redirect":"https://cn.vuejs.org/js/vue.js"}}
 
 // 猴子文档地址
@@ -61,6 +62,9 @@ $$($0).data('find', false).parents().each((i,a)=>{
 
 // 王彦军
 // cookiestxtpwd=224a08b570d10b63; cookiestxtuser=wyj; ASPSESSIONIDACRDSTBA=BMHJFNOBPPPAIMNPGMBJHBBL; usrid=39; cookiesname=%CD%F5%D1%E5%BE%FC; logoid=587270
+
+// 管理员
+// ASPSESSIONIDAAQASRDB=NEENHAKBIFLAAJEDLMNFFNPH; logoid=722182; cookiestxtpwd=; cookiestxtuser=glryc; usrid=325; cookiesname=%B9%DC%C0%ED%C8%CB%D4%B1%B4%A6
 
 /*
 let c = 'cookiestxtpwd=224a08b570d10b63; cookiestxtuser=wyj; ASPSESSIONIDACRDSTBA=BMHJFNOBPPPAIMNPGMBJHBBL; usrid=39; cookiesname=%CD%F5%D1%E5%BE%FC; logoid=587270'.replaceAll(/ +/g,'')
@@ -181,7 +185,7 @@ function AddCss(src) {
  * @param {function}  clickEventFn 按钮单击事件函数
  * @param {Boolean} hover        是否隐藏按钮
  */
-function addButton(options, clickEventFn, ishover) {
+function addButton(clickEventFn, options, ishover) {
 	const defaultOptions = {
 		text: '点击我',
 		width: '76px',
@@ -191,7 +195,7 @@ function addButton(options, clickEventFn, ishover) {
 		color: 'white',
 		background: '#006158',
 		border: '#cecfcf solid 1px',
-		callback: (e)=>{console.log(e)},
+		callback: (e)=>{console.log(e);clickEventFn(e)},
 		hover: true
 	}
 	if(typeof(options)=='string'){
@@ -1482,6 +1486,13 @@ function 自动刷新进出记录(){
 			console.log('golang中文网')
 			$$(".sidebar").hide().parents(".row").children("div:first").css({width:"100%"})
 		}
+        if(/service-cdn.qiqiuyun.net\/js-sdk-v2\/media-player\/.+player.html/.test(location.href)){
+            let btn = addButton(function(){
+                let pl = document.getElementById('example_media_1_html5_api')
+                pl.currentTime = 3600*3
+                pl.play()
+            });
+        }
 		if(/cdn.jsdelivr.net/.test(location.host)) {
 			console.log('jsdelivr CDN')
 			const toast = $$('<span>')
@@ -1535,12 +1546,15 @@ function 自动刷新进出记录(){
 			let fun1 = async function(){
 				let {data} = await $axios.get('https://zg.cpta.com.cn/examfront/menu/bar.htm?myrandom=')
 				let person = data.includes('刘远鑫')
-				$$("#form > div > div > div > div.ibox.float-e-margins > div > table > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(3) > td > table > tbody > tr:nth-child(2) > td > table").html(`<tbody><tr><td style="width:318px"><div align="center">考试科目</div></td><td style="width:126px"><div align="center">准考证号</div></td><td width="201px"><div align="center">考试时间</div></td><td width="50px"><div align="center">考场</div></td><td style="width:55px;"><div align="center">座位号</div></td></tr><tr><td><div align="center">安全生产法律法规</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-26 09:00-11:30</div></td><td><div align="center">020</div></td><td><div align="center">16</div></td></tr><tr><td><div align="center">安全生产管理</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-26 14:00-16:30</div></td><td><div align="center">046</div></td><td><div align="center">30</div></td></tr><tr><td><div align="center">安全生产技术基础</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-27 09:00-11:30</div></td><td><div align="center">035</div></td><td><div align="center">13</div></td></tr><tr><td><div align="center">安全生产专业实务（化工安全）</div></td><td nowrap=""><div align="center">121110102016</div></td><td><div align="center">2024-10-27 14:00-16:30</div></td><td><div align="center">051</div></td><td><div align="center">09</div></td></tr></tbody>`)
+				$$("#form > div > div > div > div.ibox.float-e-margins > div > table > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(3) > td > table > tbody > tr:nth-child(2) > td > table").html(`<tbody><tr><td style="width:318px"><div align="center">考试科目</div></td><td style="width:126px"><div align="center">准考证号</div></td><td width="201px"><div align="center">考试时间</div></td><td width="50px"><div align="center">考场</div></td><td style="width:55px;"><div align="center">座位号</div></td></tr><tr><td><div align="center">安全生产法律法规</div></td><td nowrap=""><div align="center">121110106104</div></td><td><div align="center">2025-10-25 09:00-11:30</div></td><td><div align="center">061</div></td><td><div align="center">04</div></td></tr><tr><td><div align="center">安全生产管理</div></td><td nowrap=""><div align="center">121110104630</div></td><td><div align="center">2025-10-25 14:00-16:30</div></td><td><div align="center">046</div></td><td><div align="center">30</div></td></tr><tr><td><div align="center">安全生产技术基础</div></td><td nowrap=""><div align="center">121110103513</div></td><td><div align="center">2025-10-26 09:00-11:30</div></td><td><div align="center">035</div></td><td><div align="center">13</div></td></tr><tr><td><div align="center">安全生产专业实务（化工安全）</div></td><td nowrap=""><div align="center">121110105109</div></td><td><div align="center">2025-10-26 14:00-16:30</div></td><td><div align="center">051</div></td><td><div align="center">09</div></td></tr></tbody>`)
 				if(person && /2023/.test($$('body > div > div > div > div > div.ibox-content > div:nth-child(1)').text())){
 					$$('body > div > div > div > div > div.ibox-content > table').html(`<tbody><tr><th colspan="4" style="text-align: center;background: aliceblue">考 生 信 息</th></tr><tr><td>姓  名：</td><td><span class="spz_class">刘远鑫</span></td><td>证件号码：</td><td>210682198909304237</td></tr><tr><td>报名省市：</td><td>辽宁省</td><td>报名地市：</td><td>辽宁省盘锦市</td></tr><tr><th colspan="3" width="65%" style="text-align: center;background: aliceblue">科 目 名 称</th><th style="text-align: center;background: aliceblue">成 绩</th></tr><tr><td colspan="3" style="text-align: center;">安全生产法律法规</td><td style="text-align: center;">51</td></tr><tr><td colspan="3" style="text-align: center;">安全生产管理</td><td style="text-align: center;">32</td></tr><tr><td colspan="3" style="text-align: center;">安全生产技术基础</td><td style="text-align: center;">36</td></tr><tr><td colspan="3" style="text-align: center;">安全生产专业实务（化工安全）</td><td style="text-align: center;">41</td></tr></tbody>`)
 				}
 				else if(person && /2024/.test($$('body > div > div > div > div > div.ibox-content > div:nth-child(1)').text())){
 					$$('body > div > div > div > div > div.ibox-content > table').html(`<tbody><tr><th colspan="4" style="text-align: center;background: aliceblue">考 生 信 息</th></tr><tr><td>姓  名：</td><td><span class="spz_class">刘1远鑫</span></td><td>证件号码：</td><td>210682198909304237</td></tr><tr><td>报名省市：</td><td>辽宁省</td><td>报名地市：</td><td>辽宁省盘锦市</td></tr><tr><th colspan="3" width="65%" style="text-align: center;background: aliceblue">科 目 名 称</th><th style="text-align: center;background: aliceblue">成 绩</th></tr><tr><td colspan="3" style="text-align: center;">安全生产法律法规</td><td style="text-align: center;">49</td></tr><tr><td colspan="3" style="text-align: center;">安全生产管理</td><td style="text-align: center;">34</td></tr><tr><td colspan="3" style="text-align: center;">安全生产技术基础</td><td style="text-align: center;">31</td></tr><tr><td colspan="3" style="text-align: center;">安全生产专业实务（化工安全）</td><td style="text-align: center;">36</td></tr></tbody>`)
+				}
+				else if(person && /2025/.test($$('body > div > div > div > div > div.ibox-content > div:nth-child(1)').text())){
+					$$('body > div > div > div > div > div.ibox-content > table').html(`<tbody><tr><th colspan="4" style="text-align: center;background: aliceblue">考 生 信 息</th></tr><tr><td>姓  名：</td><td><span class="spz_class">刘1远鑫</span></td><td>证件号码：</td><td>210682198909304237</td></tr><tr><td>报名省市：</td><td>辽宁省</td><td>报名地市：</td><td>辽宁省盘锦市</td></tr><tr><th colspan="3" width="65%" style="text-align: center;background: aliceblue">科 目 名 称</th><th style="text-align: center;background: aliceblue">成 绩</th></tr><tr><td colspan="3" style="text-align: center;">安全生产法律法规</td><td style="text-align: center;">60</td></tr><tr><td colspan="3" style="text-align: center;">安全生产管理</td><td style="text-align: center;">缺考</td></tr><tr><td colspan="3" style="text-align: center;">安全生产技术基础</td><td style="text-align: center;">缺考</td></tr><tr><td colspan="3" style="text-align: center;">安全生产专业实务（化工安全）</td><td style="text-align: center;">缺考</td></tr></tbody>`)
 				}
 			}
 			fun1();
@@ -1697,9 +1711,9 @@ async function 批量刷(e){
 	keepping(_ajax)
 
 	// 获取课程列表
-	let sss = await _ajax.post('https://zyjs.lngbzx.gov.cn/trainee/api/course/uncompleted?currentPage=1&pageSize=50&year=2025',{})
+	let sss = await _ajax.post('https://zyjs.lngbzx.gov.cn/trainee/api/course/uncompleted?currentPage=1&pageSize=50&year='+new Date().getFullYear(),{})
 	// let courses = $$('.is_cont > div').last()[0].__vue__.course_list.courses
-	courses = sss.data.data.courses
+	let courses = sss.data.data.courses
 	console.info('所有课程:', courses)
 	alert(`共计${courses.length}个课程\r\n开始学习`)
 

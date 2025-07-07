@@ -14,12 +14,14 @@
 // @match        http://10.10.10.10/appsystem/classify/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=15.32
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.js
-// @grant        none
 // @run-at       document-idle
+// @grant        GM_registerMenuCommand
+// @grant        GM_unregisterMenuCommand
 // ==/UserScript==
 
 // (function() {
 //     'use strict';
+
 
 function 公共引入(){
 	const urls = ['https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.11.0/sweetalert2.all.js']
@@ -499,15 +501,18 @@ async function updataScore(saveType='6'){
 	formmain_4490['field0034'] = 考核日期.format('yyyy-MM-dd')
 	//formmain_4490['field0034'] = fieldInfo['field0034'].showValue2;
 
+    // 是否设置"完成"
 	if(saveType*1=='1'|| true){
-		if(false && fieldInfo['field0037'].enums[0].enumValue == 0){
+		if(true && fieldInfo['field0037'].enums[0].enumValue == 0){
 			// 完成
 			formmain_4490['field0037'] = fieldInfo['field0037'].enums[0].id
 		}else{
 			// 未完成
 			formmain_4490['field0037'] = fieldInfo['field0037'].enums[1].id
 		}
-	}
+	}else{
+        alert('saveType!=1')
+    }
 
 	// 获取打分页各个项目
 	let postdata = {
@@ -538,6 +543,7 @@ async function updataScore(saveType='6'){
 
         debugger
 
+        // 填任务完成情况,已填的则跳过自动填写
 		// 任务完成情况 = 当月随机日期+工作内容
         // 这里可能存在没有设置工作内容的情况
 		if(item['field0025']==undefined || item['field0025'].length<2){
@@ -1156,6 +1162,30 @@ function 自动流程() {
 		}]
 	})
 
+	//未实现功能,暂无法使用
+    async function doUpdate是否实施(){
+        let {
+            data:rowdata
+        } = await ajax_.post('http://10.10.15.130/je/sp/ticket/application/load', $qs.stringify({
+            tableCode:'TICKET_APPLICATION',
+            funcCode: 'TICKET_APPLICATION',
+            j_query: `{"custom":[{"type":"and","value":[{"code":"TICKET_LEVEL","cn":"and","type":"like","value":"TJDHZY,YJDHZY,EJDHZY"},{"code":"START_TIME","cn":"and","type":"between","value":["${$tool.DateFormat(new Date(), 'yyyy-MM-dd')} 00:00:00","${$tool.DateFormat(new Date(), 'yyyy-MM-dd')} 23:59:59"]}],"cn":"and"}],"order":[],"_types":["group"]}`,
+            page:1,
+            limit:30,
+            start:0
+        }),{headers:{pd:'security-platform-ticket'}})
+        let rows = rowdata.data.data.rows
+        rows.forEach(async item => {
+            let {ticket_application_id} = item
+            ajax_.post('http://10.10.15.130/je/sp/ticket/application/getInfoById', $qs.stringify({
+                tableCode:'TICKET_APPLICATION',
+                funcCode:'TICKET_APPLICATION_EDIT',
+                pkValue:ticket_application_id
+            }),{headers:{pd:'security-platform-ticket'}})
+        })
+
+    }
+
 	async function getBeanIds(filters) {
 		let {
 			data: rowdata
@@ -1196,8 +1226,12 @@ function 自动流程() {
 	}
 
 	function getUser() {
-		let user = localStorage.getItem('userName'),
+		let user = $$('div.name').text() ?? localStorage.getItem('userName'),
 			ret = ''
+        if(user.trim()==''){
+            $swal.fire('先点击头像,刷出用户名')
+            return;
+        }
 		if (user == 20421 || user == '刘远鑫') {
 			ret = [{
 				"nodeId": "taskiroP6DpWEOXp7bbhv6q",
@@ -1513,6 +1547,60 @@ async function 导出责任制考核表(){
     $saveas(new Blob([result], {type: "text/plain;charset=utf-8"}), `责任考核清单.csv`)
 }
 
+// 一人一档,解绑定位卡,暂未经测试
+async function 解绑定位卡(){
+	let { value: ids } = await Swal.fire({
+		input: 'textarea',
+		inputLabel: '填写定位卡号(后5位)',
+		inputPlaceholder: '卡号\n卡号\n卡号\n...',
+		inputAttributes: {
+			'aria-label': 'Type your message here'
+		},
+		showCancelButton: true
+	})
+	ids = ids??''
+
+	ids = ids.replace(/[\r\n]/g,'').trim().split(',')
+	ids.pop()
+	if(ids==''){
+		alert('未填')
+		return 0;
+	}
+
+	let aj = $axios.create({headers:{
+		'authorization': '3e5cbdab-7c24-42ac-82b2-f1382b456cac',
+		'Pd': 'security-platform-base'
+	}})
+
+	for(let id of ids){
+		id = '0000000' + id
+		id = '310' + id.substr(-5)
+
+		// 查询卡
+		let data = await aj.post('http://10.10.15.130/je/sp/base/persionnel/load', `tableCode=BASE_USER&funcCode=BASE_USER&j_query=%7B%22custom%22%3A%5B%7B%22type%22%3A%22and%22%2C%22value%22%3A%5B%7B%22code%22%3A%22LABEL%22%2C%22cn%22%3A%22and%22%2C%22type%22%3A%22like%22%2C%22value%22%3A%22${id}%22%7D%5D%2C%22cn%22%3A%22and%22%7D%5D%2C%22order%22%3A%5B%5D%2C%22_types%22%3A%5B%22group%22%5D%7D&page=1&limit=30&start=0`)
+		data = data.data
+		data = data.data
+		let rows = data.rows
+		if(rows.length<=0){
+			$swal.fire('未绑定人员')
+			return 0;
+		}
+		for(let row of rows){
+			let {JE_RBAC_USER_ID, USER_CODE, LABEL} = row
+			console.log({JE_RBAC_USER_ID, USER_CODE})
+			// 解绑卡
+			let data = await aj.post('http://10.10.15.130/je/sp/base/persionnel/unbind',$qs.stringify({JE_RBAC_USER_ID, USER_CODE}))
+			data = data.data
+			if(data.code=='9999'){
+				$swal.fire(data.message)
+			}else if(data.code=='1000'){
+				$swal.fire('解绑成功')
+			}else{
+				console.log(data)
+			}
+		}
+	}
+}
 
 if(/10\.10\.54\.18/.test(location.href)){
 	// 新增组()
@@ -1528,12 +1616,36 @@ else if (/10\.10\.15\.32/.test(location.href)) {
 	//登录OA()
 	//批量修改密码()
 	//打分()
+    const menu_command_id_1 = GM_registerMenuCommand("Show Alert", async function(e) {
+        alert("Menu item selected");
+        await updataScore(1)
+    }, {
+        accessKey: "a",
+        autoClose: true
+    });
+
+    const menu_command_id_2 = GM_registerMenuCommand("只打分", async function(e) {
+        alert("Menu item selected");
+        await updataScore(1)
+    }, {
+        accessKey: "a",
+        autoClose: true
+    });
     // 导出考核表()
+}else if(/10.10.15.130/.test(location.href)){
+    const menu_command_id_1 = GM_registerMenuCommand("解绑定位卡", async function(e) {
+        await 解绑定位卡()
+    }, {
+        accessKey: "a",
+        autoClose: true
+    });
 }else if(/10.10.10.10\/appsystem\/classify\/*/.test(location.href)){
 	筛选制度()
 }else if(/www.baomi.org.cn/.test(location.href)){
 	保密刷课()
-}else if(/10.10.15.130/.test(location.href)){
+}
+
+if(/10.10.15.130/.test(location.href)){
     自动流程()
 }
 
